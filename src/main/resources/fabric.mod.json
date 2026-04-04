@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "pv-voice-changer",
+  "version": "${version}",
+  "name": "Plasmo Voice Changer",
+  "description": "Client-side mod for Plasmo Voice that adds a full live voice changer with presets, custom tuning, saved profiles, self listen, and a native settings UI.",
+  "authors": [
+    "sawiq_"
+  ],
+  "contact": {
+    "sources": "https://github.com/imsawiq/pv-voice-changer",
+    "issues": "https://github.com/imsawiq/pv-voice-changer/issues",
+    "discord": "https://discord.gg/UTxEy4PtSU"
+  },
+  "license": "MIT",
+  "icon": "assets/pv-voice-changer/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "org.sawiq.client.PvVoiceChangerClient"
+    ]
+  },
+  "mixins": [
+    "pv-voice-changer.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": ">=1.21 <=1.21.11"
+  }
+}
