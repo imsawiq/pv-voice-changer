@@ -5,12 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
 import org.sawiq.client.VoiceChangerAddon;
 import org.sawiq.client.model.VoiceChangerPreset;
@@ -28,86 +28,86 @@ public final class VoiceChangerStudioScreen extends Screen {
     private final List<StudioProfileSlider> sliders = new ArrayList<>();
     private String selectedSavedPreset = CURRENT_OPTION;
 
-    private TextFieldWidget presetNameField;
-    private ButtonWidget enabledButton;
-    private ButtonWidget selfListenButton;
-    private ButtonWidget builtInPresetButton;
-    private ButtonWidget savedPresetButton;
+    private EditBox presetNameField;
+    private Button enabledButton;
+    private Button selfListenButton;
+    private Button builtInPresetButton;
+    private Button savedPresetButton;
     private StudioStrengthSlider strengthSlider;
-    private Text hoveredHint;
+    private Component hoveredHint;
 
     public VoiceChangerStudioScreen(Screen parent, VoiceChangerAddon addon) {
-        super(Text.translatable("pvvoicechanger.studio.title"));
+        super(Component.translatable("pvvoicechanger.studio.title"));
         this.parent = parent;
         this.addon = addon;
     }
 
     @Override
     protected void init() {
-        this.clearChildren();
+        this.clearWidgets();
         this.sliders.clear();
 
         StudioLayout layout = new StudioLayout(this.width, this.height);
         initTopControls(layout);
         initSliders(layout);
-        addDrawableChild(ButtonWidget.builder(Text.translatable("gui.done"), button -> close()).dimensions(this.width / 2 - 60, this.height - 28, 120, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.done"), button -> onClose()).bounds(this.width / 2 - 60, this.height - 28, 120, 20).build());
 
         refreshFromAddon(false);
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         this.addon.setSelfListenEnabled(false);
-        if (this.client != null) {
-            this.client.setScreen(this.parent);
+        if (this.minecraft != null) {
+            this.minecraft.setScreen(this.parent);
         }
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         this.hoveredHint = null;
         context.fill(0, 0, this.width, this.height, 0xA0000000);
         renderHeader(context);
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
         updateHoveredHint(mouseX, mouseY);
 
         if (this.hoveredHint != null) {
-            context.drawTooltip(this.textRenderer, this.hoveredHint, mouseX, mouseY);
+            context.setTooltipForNextFrame(this.font, this.hoveredHint, mouseX, mouseY);
         }
     }
 
     private void initTopControls(StudioLayout layout) {
-        this.presetNameField = addDrawableChild(new TextFieldWidget(this.textRenderer, layout.left(), layout.top(), layout.fieldWidth(), 20, Text.translatable("pvvoicechanger.studio.preset_name")));
+        this.presetNameField = addRenderableWidget(new EditBox(this.font, layout.left(), layout.top(), layout.fieldWidth(), 20, Component.translatable("pvvoicechanger.studio.preset_name")));
         this.presetNameField.setMaxLength(48);
-        this.presetNameField.setText("MyPreset");
+        this.presetNameField.setValue("MyPreset");
 
-        addDrawableChild(ButtonWidget.builder(Text.translatable("pvvoicechanger.studio.save"), button -> savePreset()).dimensions(layout.left() + layout.fieldWidth() + 6, layout.top(), layout.buttonWidth(), 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.studio.save"), button -> savePreset()).bounds(layout.left() + layout.fieldWidth() + 6, layout.top(), layout.buttonWidth(), 20).build());
 
-        this.enabledButton = addDrawableChild(ButtonWidget.builder(enabledButtonText(), button -> {
+        this.enabledButton = addRenderableWidget(Button.builder(enabledButtonText(), button -> {
             this.addon.setEnabled(!this.addon.getEnabledEntry().value());
             refreshBooleanButtons();
-        }).dimensions(layout.left(), layout.top() + 26, layout.topWidth(), 20).build());
-        this.selfListenButton = addDrawableChild(ButtonWidget.builder(selfListenButtonText(), button -> {
+        }).bounds(layout.left(), layout.top() + 26, layout.topWidth(), 20).build());
+        this.selfListenButton = addRenderableWidget(Button.builder(selfListenButtonText(), button -> {
             this.addon.setSelfListenEnabled(!this.addon.getSelfListenEntry().value());
             refreshBooleanButtons();
-        }).dimensions(layout.right(), layout.top() + 26, SLIDER_WIDTH, 20).build());
+        }).bounds(layout.right(), layout.top() + 26, SLIDER_WIDTH, 20).build());
 
-        this.builtInPresetButton = addDrawableChild(ButtonWidget.builder(builtInPresetButtonText(), button -> cycleBuiltInPreset())
-                .dimensions(layout.left(), layout.top() + 52, layout.topWidth(), 20).build());
+        this.builtInPresetButton = addRenderableWidget(Button.builder(builtInPresetButtonText(), button -> cycleBuiltInPreset())
+                .bounds(layout.left(), layout.top() + 52, layout.topWidth(), 20).build());
 
-        this.savedPresetButton = addDrawableChild(ButtonWidget.builder(savedPresetButtonText(), button -> cycleSavedPreset())
-                .dimensions(layout.right(), layout.top() + 52, SLIDER_WIDTH, 20).build());
+        this.savedPresetButton = addRenderableWidget(Button.builder(savedPresetButtonText(), button -> cycleSavedPreset())
+                .bounds(layout.right(), layout.top() + 52, SLIDER_WIDTH, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.translatable("pvvoicechanger.studio.open_folder"), button -> openFolder()).dimensions(layout.left(), layout.top() + 78, layout.topWidth(), 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.translatable("pvvoicechanger.studio.reload_list"), button -> refreshFromAddon(true)).dimensions(layout.right(), layout.top() + 78, SLIDER_WIDTH, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.studio.open_folder"), button -> openFolder()).bounds(layout.left(), layout.top() + 78, layout.topWidth(), 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.studio.reload_list"), button -> refreshFromAddon(true)).bounds(layout.right(), layout.top() + 78, SLIDER_WIDTH, 20).build());
 
-        ButtonWidget deleteButton = addDrawableChild(ButtonWidget.builder(Text.translatable("pvvoicechanger.studio.delete_saved"), button -> deleteSelectedPreset()).dimensions(layout.right(), layout.top() + 104, SLIDER_WIDTH, 20).build());
-        deleteButton.setTooltip(Tooltip.of(Text.translatable("pvvoicechanger.studio.delete_saved.desc")));
+        Button deleteButton = addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.studio.delete_saved"), button -> deleteSelectedPreset()).bounds(layout.right(), layout.top() + 104, SLIDER_WIDTH, 20).build());
+        deleteButton.setTooltip(Tooltip.create(Component.translatable("pvvoicechanger.studio.delete_saved.desc")));
     }
 
     private void initSliders(StudioLayout layout) {
         int sliderTop = layout.top() + 132;
-        this.strengthSlider = addDrawableChild(new StudioStrengthSlider(layout.left(), sliderTop, SLIDER_WIDTH, () -> this.addon.getStrengthEntry().value(), this.addon::setStrength));
+        this.strengthSlider = addRenderableWidget(new StudioStrengthSlider(layout.left(), sliderTop, SLIDER_WIDTH, () -> this.addon.getStrengthEntry().value(), this.addon::setStrength));
 
         addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT, "pvvoicechanger.slider.mix", 0.0D, 1.0D, VoiceChangerProfile::mix, (profile, value) ->
                 new VoiceChangerProfile(value, profile.gain(), profile.pitch(), profile.formant(), profile.distortion(), profile.robotMix(), profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), profile.midEq(), profile.highEq(), profile.noise()));
@@ -159,7 +159,7 @@ public final class VoiceChangerStudioScreen extends Screen {
                 setter
         );
         this.sliders.add(slider);
-        addDrawableChild(slider);
+        addRenderableWidget(slider);
     }
 
     private void applyCustomProfile(VoiceChangerProfile profile) {
@@ -167,12 +167,13 @@ public final class VoiceChangerStudioScreen extends Screen {
         this.selectedSavedPreset = CURRENT_OPTION;
     }
 
-    private void renderHeader(DrawContext context) {
+    private void renderHeader(GuiGraphicsExtractor context) {
+        context.centeredText(this.font, this.title, this.width / 2, 8, 0xFFFFFF);
     }
 
     private void updateHoveredHint(int mouseX, int mouseY) {
         if (this.strengthSlider != null && this.strengthSlider.isMouseOver(mouseX, mouseY)) {
-            this.hoveredHint = Text.translatable("pvvoicechanger.slider.strength.desc");
+            this.hoveredHint = Component.translatable("pvvoicechanger.slider.strength.desc");
             return;
         }
 
@@ -205,20 +206,20 @@ public final class VoiceChangerStudioScreen extends Screen {
 
     private void savePreset() {
         try {
-            String savedName = this.addon.saveCurrentPreset(this.presetNameField.getText());
-            this.presetNameField.setText(savedName);
+            String savedName = this.addon.saveCurrentPreset(this.presetNameField.getValue());
+            this.presetNameField.setValue(savedName);
             this.selectedSavedPreset = savedName;
             refreshFromAddon(true);
-            notifyUser(Text.translatable("pvvoicechanger.message.saved", savedName));
+            notifyUser(Component.translatable("pvvoicechanger.message.saved", savedName));
         } catch (IOException | IllegalArgumentException exception) {
-            notifyUser(Text.translatable("pvvoicechanger.message.save_failed", exception.getMessage()));
+            notifyUser(Component.translatable("pvvoicechanger.message.save_failed", exception.getMessage()));
         }
     }
 
     private void deleteSelectedPreset() {
         String selected = currentSavedSelection();
         if (CURRENT_OPTION.equals(selected)) {
-            notifyUser(Text.translatable("pvvoicechanger.message.select_saved_first"));
+            notifyUser(Component.translatable("pvvoicechanger.message.select_saved_first"));
             return;
         }
 
@@ -226,18 +227,18 @@ public final class VoiceChangerStudioScreen extends Screen {
             this.addon.deleteSavedPreset(selected);
             this.selectedSavedPreset = CURRENT_OPTION;
             refreshFromAddon(true);
-            notifyUser(Text.translatable("pvvoicechanger.message.deleted", selected));
+            notifyUser(Component.translatable("pvvoicechanger.message.deleted", selected));
         } catch (IOException exception) {
-            notifyUser(Text.translatable("pvvoicechanger.message.delete_failed", exception.getMessage()));
+            notifyUser(Component.translatable("pvvoicechanger.message.delete_failed", exception.getMessage()));
         }
     }
 
     private void openFolder() {
         try {
             this.addon.ensurePresetDirectory();
-            Util.getOperatingSystem().open(this.addon.getPresetDirectory());
+            Util.getPlatform().openPath(this.addon.getPresetDirectory());
         } catch (IOException exception) {
-            notifyUser(Text.translatable("pvvoicechanger.message.open_folder_failed", exception.getMessage()));
+            notifyUser(Component.translatable("pvvoicechanger.message.open_folder_failed", exception.getMessage()));
         }
     }
 
@@ -252,16 +253,16 @@ public final class VoiceChangerStudioScreen extends Screen {
         return this.selectedSavedPreset == null ? CURRENT_OPTION : this.selectedSavedPreset;
     }
 
-    private Text enabledButtonText() {
+    private Component enabledButtonText() {
         return this.addon.getEnabledEntry().value()
-                ? Text.translatable("pvvoicechanger.studio.enabled_on")
-                : Text.translatable("pvvoicechanger.studio.enabled_off");
+                ? Component.translatable("pvvoicechanger.studio.enabled_on")
+                : Component.translatable("pvvoicechanger.studio.enabled_off");
     }
 
-    private Text selfListenButtonText() {
+    private Component selfListenButtonText() {
         return this.addon.getSelfListenEntry().value()
-                ? Text.translatable("pvvoicechanger.studio.self_listen_on")
-                : Text.translatable("pvvoicechanger.studio.self_listen_off");
+                ? Component.translatable("pvvoicechanger.studio.self_listen_on")
+                : Component.translatable("pvvoicechanger.studio.self_listen_off");
     }
 
     private void refreshBooleanButtons() {
@@ -273,14 +274,14 @@ public final class VoiceChangerStudioScreen extends Screen {
         }
     }
 
-    private Text builtInPresetButtonText() {
-        return Text.translatable("pvvoicechanger.studio.built_in_value", Text.translatable(this.addon.getSelectedPreset().getTranslationKey()));
+    private Component builtInPresetButtonText() {
+        return Component.translatable("pvvoicechanger.studio.built_in_value", Component.translatable(this.addon.getSelectedPreset().getTranslationKey()));
     }
 
-    private Text savedPresetButtonText() {
+    private Component savedPresetButtonText() {
         String value = currentSavedSelection();
-        Text current = CURRENT_OPTION.equals(value) ? Text.translatable("pvvoicechanger.saved.current") : Text.literal(value);
-        return Text.translatable("pvvoicechanger.studio.saved_value", current);
+        Component current = CURRENT_OPTION.equals(value) ? Component.translatable("pvvoicechanger.saved.current") : Component.literal(value);
+        return Component.translatable("pvvoicechanger.studio.saved_value", current);
     }
 
     private void refreshPresetButtons() {
@@ -330,16 +331,16 @@ public final class VoiceChangerStudioScreen extends Screen {
             try {
                 this.addon.loadSavedPreset(next);
             } catch (IOException exception) {
-                notifyUser(Text.translatable("pvvoicechanger.message.load_failed", exception.getMessage()));
+                notifyUser(Component.translatable("pvvoicechanger.message.load_failed", exception.getMessage()));
             }
         }
 
         refreshFromAddon(false);
     }
 
-    private void notifyUser(Text message) {
-        if (this.client != null && this.client.player != null) {
-            this.client.player.sendMessage(message, false);
+    private void notifyUser(Component message) {
+        if (this.minecraft != null && this.minecraft.player != null) {
+            this.minecraft.player.sendSystemMessage(message);
         }
     }
 

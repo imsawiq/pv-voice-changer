@@ -3,7 +3,7 @@ package org.sawiq.mixin.client;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import org.sawiq.client.VoiceChangerAddon;
 import org.sawiq.client.model.VoiceChangerPreset;
 import org.sawiq.client.ui.VoiceChangerStudioScreen;
@@ -63,7 +63,7 @@ public abstract class ActivationTabWidgetMixin extends AbstractHotKeysTabWidget 
                 tr("pvvoicechanger.tab.open_studio"),
                 button -> {
                     if (this.parent instanceof VoiceSettingsScreen settingsScreen) {
-                        MinecraftClient.getInstance().setScreen(new VoiceChangerStudioScreen(settingsScreen.getMinecraftScreen(), addon));
+                        Minecraft.getInstance().setScreen(new VoiceChangerStudioScreen(settingsScreen.getMinecraftScreen(), addon));
                     }
                 },
                 Button.NO_TOOLTIP
@@ -77,7 +77,7 @@ public abstract class ActivationTabWidgetMixin extends AbstractHotKeysTabWidget 
                 button -> {
                     try {
                         addon.ensurePresetDirectory();
-                        net.minecraft.util.Util.getOperatingSystem().open(addon.getPresetDirectory());
+                        net.minecraft.util.Util.getPlatform().openPath(addon.getPresetDirectory());
                     } catch (java.io.IOException ignored) {
                     }
                 },

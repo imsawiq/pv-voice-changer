@@ -5,11 +5,11 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import net.minecraft.client.gui.widget.SliderWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.components.AbstractSliderButton;
+import net.minecraft.network.chat.Component;
 import org.sawiq.client.model.VoiceChangerProfile;
 
-public final class StudioProfileSlider extends SliderWidget {
+public final class StudioProfileSlider extends AbstractSliderButton {
     private static final DecimalFormat DECIMAL = new DecimalFormat("0.00");
 
     private final String label;
@@ -34,7 +34,7 @@ public final class StudioProfileSlider extends SliderWidget {
             Function<VoiceChangerProfile, Number> getter,
             BiFunction<VoiceChangerProfile, Double, VoiceChangerProfile> setter
     ) {
-        super(x, y, width, 20, Text.translatable(label), 0.0D);
+        super(x, y, width, 20, Component.translatable(label), 0.0D);
         this.label = label;
         this.description = description;
         this.min = min;
@@ -59,7 +59,7 @@ public final class StudioProfileSlider extends SliderWidget {
     @Override
     protected void updateMessage() {
         double realValue = this.min + (this.max - this.min) * this.value;
-        this.setMessage(Text.literal(Text.translatable(this.label).getString() + ": " + DECIMAL.format(realValue)));
+        this.setMessage(Component.literal(Component.translatable(this.label).getString() + ": " + DECIMAL.format(realValue)));
     }
 
     @Override
@@ -72,7 +72,7 @@ public final class StudioProfileSlider extends SliderWidget {
         this.profileConsumer.accept(this.setter.apply(this.profileSupplier.get(), realValue));
     }
 
-    public Text descriptionText() {
-        return Text.translatable(this.description);
+    public Component descriptionText() {
+        return Component.translatable(this.description);
     }
 }

@@ -3,8 +3,8 @@ package org.sawiq.client;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 import org.sawiq.client.audio.VoiceChangerLiveFilter;
 import org.sawiq.client.audio.VoiceChangerSelfListenPreview;
@@ -423,7 +423,7 @@ public final class VoiceChangerAddon {
     }
 
     private boolean isStudioPreviewActive() {
-        return MinecraftClient.getInstance().currentScreen instanceof VoiceChangerStudioScreen;
+        return Minecraft.getInstance().screen instanceof VoiceChangerStudioScreen;
     }
 
     private static int clampInt(int value, int min, int max) {
@@ -460,16 +460,15 @@ public final class VoiceChangerAddon {
     }
 
     private void showToggleStatus() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) {
             return;
         }
 
-        client.player.sendMessage(
+        client.player.sendOverlayMessage(
                 this.enabledEntry.value()
-                        ? Text.translatable("pvvoicechanger.actionbar.enabled")
-                        : Text.translatable("pvvoicechanger.actionbar.disabled"),
-                true
+                        ? Component.translatable("pvvoicechanger.actionbar.enabled")
+                        : Component.translatable("pvvoicechanger.actionbar.disabled")
         );
     }
 }
