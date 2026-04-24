@@ -87,6 +87,7 @@ public final class VoiceChangerSelfListenPreview {
         VoiceChangerAudioEngine.VoiceChangerState previewState = new VoiceChangerAudioEngine.VoiceChangerState();
         byte[] pcm = new byte[1920];
         short[] samples = new short[960];
+        byte[] output = new byte[1920];
 
         try {
             while (this.running && this.enabledSupplier.getAsBoolean() && this.previewActiveSupplier.getAsBoolean()) {
@@ -99,6 +100,10 @@ public final class VoiceChangerSelfListenPreview {
                 if (samples.length != sampleCount) {
                     samples = new short[sampleCount];
                 }
+                int outputLength = sampleCount * 2;
+                if (output.length < outputLength) {
+                    output = new byte[outputLength];
+                }
 
                 for (int i = 0; i < sampleCount; i++) {
                     int lo = pcm[i * 2] & 0xFF;
@@ -110,8 +115,8 @@ public final class VoiceChangerSelfListenPreview {
                     VoiceChangerAudioEngine.process(samples, 1, this.profileSupplier.get(), this.strengthSupplier.getAsInt(), previewState);
                 }
 
-                byte[] output = shortsToBytes(samples);
-                this.outputLine.write(output, 0, output.length);
+                shortsToBytes(samples, output);
+                this.outputLine.write(output, 0, outputLength);
             }
         } catch (Exception ignored) {
             this.disableCallback.run();
@@ -137,13 +142,11 @@ public final class VoiceChangerSelfListenPreview {
         return line;
     }
 
-    private static byte[] shortsToBytes(short[] samples) {
-        byte[] bytes = new byte[samples.length * 2];
+    private static void shortsToBytes(short[] samples, byte[] bytes) {
         for (int i = 0; i < samples.length; i++) {
             short sample = samples[i];
             bytes[i * 2] = (byte) (sample & 0xFF);
             bytes[i * 2 + 1] = (byte) ((sample >>> 8) & 0xFF);
         }
-        return bytes;
     }
 }
