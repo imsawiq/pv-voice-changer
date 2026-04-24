@@ -23,8 +23,15 @@ final class VoiceChangerAudioEngine {
         VoiceChangerProfile scaled = scale(profile, amount);
         state.prepare(safeChannels);
 
-        short[] pitched = applyPitchShifter(samples, safeChannels, scaled.pitch(), state);
-        processVoicing(samples, pitched, safeChannels, scaled, state);
+        short[] voicingSource;
+        if (Math.abs(scaled.pitch() - 1.0D) < 0.015D) {
+            voicingSource = samples;
+        } else {
+            short[] scratch = state.ensurePitchScratch(samples.length);
+            applyPitchShifter(samples, scratch, safeChannels, scaled.pitch(), state);
+            voicingSource = scratch;
+        }
+        processVoicing(samples, voicingSource, safeChannels, scaled, state);
     }
 
     private static VoiceChangerProfile scale(VoiceChangerProfile profile, double amount) {
@@ -50,12 +57,7 @@ final class VoiceChangerAudioEngine {
         );
     }
 
-    private static short[] applyPitchShifter(short[] samples, int channels, double pitchRatio, VoiceChangerState state) {
-        if (Math.abs(pitchRatio - 1.0D) < 0.015D) {
-            return Arrays.copyOf(samples, samples.length);
-        }
-
-        short[] output = new short[samples.length];
+    private static void applyPitchShifter(short[] samples, short[] output, int channels, double pitchRatio, VoiceChangerState state) {
         double ratio = clamp(pitchRatio, 0.72D, 1.38D);
         double phaseStep = (1.0D - ratio) / PITCH_WINDOW;
 
@@ -83,8 +85,6 @@ final class VoiceChangerAudioEngine {
             state.pitchWriteCursor[channel] = (write + 1) % buffer.length;
             state.pitchPhase[channel] = wrap01(phaseA + phaseStep);
         }
-
-        return output;
     }
 
     private static double readDelayed(float[] buffer, int write, double delaySamples) {
@@ -354,6 +354,14 @@ final class VoiceChangerAudioEngine {
         private float[][] pitchBuffer = new float[1][PITCH_BUFFER_SIZE];
         private int[] pitchWriteCursor = new int[1];
         private double[] pitchPhase = new double[1];
+        private short[] pitchScratch = new short[0];
+
+        short[] ensurePitchScratch(int length) {
+            if (this.pitchScratch.length < length) {
+                this.pitchScratch = new short[length];
+            }
+            return this.pitchScratch;
+        }
 
         void prepare(int channels) {
             this.robotPhase = ensureSize(this.robotPhase, channels);

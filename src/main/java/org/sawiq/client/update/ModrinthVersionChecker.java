@@ -33,8 +33,9 @@ public final class ModrinthVersionChecker {
         this.checked = true;
 
         return CompletableFuture.supplyAsync(() -> {
+            HttpURLConnection connection = null;
             try {
-                HttpURLConnection connection = (HttpURLConnection) new URL(MODRINTH_API).openConnection();
+                connection = (HttpURLConnection) new URL(MODRINTH_API).openConnection();
                 connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
                 connection.setReadTimeout(READ_TIMEOUT_MS);
                 connection.setRequestProperty("Accept", "application/json");
@@ -45,7 +46,10 @@ public final class ModrinthVersionChecker {
                     return null;
                 }
 
-                String json = new String(connection.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                String json;
+                try (java.io.InputStream input = connection.getInputStream()) {
+                    json = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+                }
                 JsonElement root = JsonParser.parseString(json);
                 if (!root.isJsonArray()) {
                     return null;
@@ -81,6 +85,10 @@ public final class ModrinthVersionChecker {
                 return null;
             } catch (Exception e) {
                 return null;
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
             }
         });
     }
