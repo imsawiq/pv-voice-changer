@@ -99,5 +99,10 @@
   "pvvoicechanger.message.load_failed": "Failed to load preset: %s",
   "pvvoicechanger.message.delete_failed": "Delete failed: %s",
   "pvvoicechanger.message.open_folder_failed": "Failed to open folder: %s",
-  "pvvoicechanger.message.select_saved_first": "Select a saved preset first."
+  "pvvoicechanger.message.select_saved_first": "Select a saved preset first.",
+  "pvvoicechanger.update.title": "Plasmo Voice Changer Update",
+  "pvvoicechanger.update.subtitle": "New version available: %s",
+  "pvvoicechanger.update.current": "Current version: %s",
+  "pvvoicechanger.update.open_page": "Open Modrinth Page",
+  "pvvoicechanger.update.dismiss": "Dismiss"
 }

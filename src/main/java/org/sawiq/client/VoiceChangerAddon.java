@@ -272,7 +272,7 @@ public final class VoiceChangerAddon {
         Hotkey hotkey = this.toggleHotkeyEntry.value();
         hotkey.clearPressListener();
         hotkey.addPressListener(action -> {
-            if (action == Hotkey.Action.DOWN) {
+            if (action == Hotkey.Action.DOWN && Minecraft.getInstance().screen == null) {
                 toggleEnabled();
             }
         });

@@ -99,5 +99,10 @@
   "pvvoicechanger.message.load_failed": "Не удалось загрузить пресет: %s",
   "pvvoicechanger.message.delete_failed": "Не удалось удалить: %s",
   "pvvoicechanger.message.open_folder_failed": "Не удалось открыть папку: %s",
-  "pvvoicechanger.message.select_saved_first": "Сначала выбери сохранённый пресет."
+  "pvvoicechanger.message.select_saved_first": "Сначала выбери сохранённый пресет.",
+  "pvvoicechanger.update.title": "Обновление Plasmo Voice Changer",
+  "pvvoicechanger.update.subtitle": "Доступна новая версия: %s",
+  "pvvoicechanger.update.current": "Текущая версия: %s",
+  "pvvoicechanger.update.open_page": "Открыть страницу Modrinth",
+  "pvvoicechanger.update.dismiss": "Закрыть"
 }
