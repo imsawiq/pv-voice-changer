@@ -142,6 +142,10 @@ public final class VoiceChangerPresetStore {
         properties.setProperty("midEq", Double.toString(profile.midEq()));
         properties.setProperty("highEq", Double.toString(profile.highEq()));
         properties.setProperty("noise", Double.toString(profile.noise()));
+        properties.setProperty("autotuneMix", Double.toString(profile.autotuneMix()));
+        properties.setProperty("autotuneStrength", Double.toString(profile.autotuneStrength()));
+        properties.setProperty("autotuneKey", Integer.toString(profile.autotuneKey()));
+        properties.setProperty("autotuneScale", Integer.toString(profile.autotuneScale()));
 
         try (OutputStream output = Files.newOutputStream(path)) {
             properties.store(output, "Plasmo Voice Changer preset");
@@ -189,7 +193,11 @@ public final class VoiceChangerPresetStore {
                 safeDouble(properties, "lowEq", 0.00D, -10.0D, 10.0D),
                 safeDouble(properties, "midEq", 0.00D, -10.0D, 10.0D),
                 safeDouble(properties, "highEq", 0.00D, -10.0D, 10.0D),
-                safeDouble(properties, "noise", 0.00D, 0.0D, 0.60D)
+                safeDouble(properties, "noise", 0.00D, 0.0D, 0.60D),
+                safeDouble(properties, "autotuneMix", 0.00D, 0.0D, 1.0D),
+                safeDouble(properties, "autotuneStrength", 0.60D, 0.0D, 1.0D),
+                clampInt(parseInt(properties, "autotuneKey", 0), 0, 11),
+                clampInt(parseInt(properties, "autotuneScale", 0), 0, 2)
         );
     }
 
@@ -226,7 +234,11 @@ public final class VoiceChangerPresetStore {
                 safeDouble(profile.lowEq(), 0.00D, -10.0D, 10.0D),
                 safeDouble(profile.midEq(), 0.00D, -10.0D, 10.0D),
                 safeDouble(profile.highEq(), 0.00D, -10.0D, 10.0D),
-                safeDouble(profile.noise(), 0.00D, 0.0D, 0.60D)
+                safeDouble(profile.noise(), 0.00D, 0.0D, 0.60D),
+                safeDouble(profile.autotuneMix(), 0.00D, 0.0D, 1.0D),
+                safeDouble(profile.autotuneStrength(), 0.60D, 0.0D, 1.0D),
+                clampInt(profile.autotuneKey(), 0, 11),
+                clampInt(profile.autotuneScale(), 0, 2)
         );
     }
 
