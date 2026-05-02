@@ -23,6 +23,10 @@ final class VoiceChangerAudioEngine {
         VoiceChangerProfile scaled = scale(profile, amount);
         state.prepare(safeChannels);
 
+        if (profile.autotuneMix() > 0.005D) {
+            VoiceChangerAutotune.process(samples, safeChannels, profile, amount, state.autotuneState);
+        }
+
         short[] voicingSource;
         if (Math.abs(scaled.pitch() - 1.0D) < 0.015D) {
             voicingSource = samples;
@@ -53,7 +57,11 @@ final class VoiceChangerAudioEngine {
                 profile.lowEq() * wet,
                 profile.midEq() * wet,
                 profile.highEq() * wet,
-                profile.noise() * wet
+                profile.noise() * wet,
+                profile.autotuneMix() * wet,
+                profile.autotuneStrength(),
+                profile.autotuneKey(),
+                profile.autotuneScale()
         );
     }
 
@@ -355,6 +363,7 @@ final class VoiceChangerAudioEngine {
         private int[] pitchWriteCursor = new int[1];
         private double[] pitchPhase = new double[1];
         private short[] pitchScratch = new short[0];
+        final VoiceChangerAutotune.AutotuneState autotuneState = new VoiceChangerAutotune.AutotuneState();
 
         short[] ensurePitchScratch(int length) {
             if (this.pitchScratch.length < length) {

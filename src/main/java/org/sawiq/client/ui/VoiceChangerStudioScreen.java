@@ -5,13 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import net.minecraft.util.Util;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Util;
 import org.sawiq.client.VoiceChangerAddon;
 import org.sawiq.client.model.VoiceChangerPreset;
 import org.sawiq.client.model.VoiceChangerProfile;
@@ -23,6 +23,8 @@ public final class VoiceChangerStudioScreen extends Screen {
     private static final int ROW_HEIGHT = 22;
     private static final String CURRENT_OPTION = "__current__";
 
+    private static final String[] KEY_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+
     private final Screen parent;
     private final VoiceChangerAddon addon;
     private final List<StudioProfileSlider> sliders = new ArrayList<>();
@@ -33,6 +35,8 @@ public final class VoiceChangerStudioScreen extends Screen {
     private Button selfListenButton;
     private Button builtInPresetButton;
     private Button savedPresetButton;
+    private Button autotuneKeyButton;
+    private Button autotuneScaleButton;
     private StudioStrengthSlider strengthSlider;
     private Component hoveredHint;
 
@@ -103,45 +107,43 @@ public final class VoiceChangerStudioScreen extends Screen {
 
         Button deleteButton = addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.studio.delete_saved"), button -> deleteSelectedPreset()).bounds(layout.right(), layout.top() + 104, SLIDER_WIDTH, 20).build());
         deleteButton.setTooltip(Tooltip.create(Component.translatable("pvvoicechanger.studio.delete_saved.desc")));
+
+        Button resetButton = addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.studio.reset"), button -> resetToPassthrough()).bounds(layout.left(), layout.top() + 104, layout.topWidth(), 20).build());
+        resetButton.setTooltip(Tooltip.create(Component.translatable("pvvoicechanger.studio.reset.desc")));
     }
 
     private void initSliders(StudioLayout layout) {
         int sliderTop = layout.top() + 132;
         this.strengthSlider = addRenderableWidget(new StudioStrengthSlider(layout.left(), sliderTop, SLIDER_WIDTH, () -> this.addon.getStrengthEntry().value(), this.addon::setStrength));
 
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT, "pvvoicechanger.slider.mix", 0.0D, 1.0D, VoiceChangerProfile::mix, (profile, value) ->
-                new VoiceChangerProfile(value, profile.gain(), profile.pitch(), profile.formant(), profile.distortion(), profile.robotMix(), profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), profile.midEq(), profile.highEq(), profile.noise()));
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 2, "pvvoicechanger.slider.gain", 0.40D, 2.50D, VoiceChangerProfile::gain, (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), value, profile.pitch(), profile.formant(), profile.distortion(), profile.robotMix(), profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), profile.midEq(), profile.highEq(), profile.noise()));
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 3, "pvvoicechanger.slider.pitch", 0.55D, 2.20D, VoiceChangerProfile::pitch, (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), value, profile.formant(), profile.distortion(), profile.robotMix(), profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), profile.midEq(), profile.highEq(), profile.noise()));
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 4, "pvvoicechanger.slider.formant", 0.45D, 2.00D, VoiceChangerProfile::formant, (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), profile.pitch(), value, profile.distortion(), profile.robotMix(), profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), profile.midEq(), profile.highEq(), profile.noise()));
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 5, "pvvoicechanger.slider.low_eq", -10.0D, 10.0D, VoiceChangerProfile::lowEq, (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), profile.pitch(), profile.formant(), profile.distortion(), profile.robotMix(), profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), value, profile.midEq(), profile.highEq(), profile.noise()));
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 6, "pvvoicechanger.slider.mid_eq", -10.0D, 10.0D, VoiceChangerProfile::midEq, (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), profile.pitch(), profile.formant(), profile.distortion(), profile.robotMix(), profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), value, profile.highEq(), profile.noise()));
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 7, "pvvoicechanger.slider.high_eq", -10.0D, 10.0D, VoiceChangerProfile::highEq, (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), profile.pitch(), profile.formant(), profile.distortion(), profile.robotMix(), profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), profile.midEq(), value, profile.noise()));
+        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT, "pvvoicechanger.slider.mix", 0.0D, 1.0D, VoiceChangerProfile::mix, VoiceChangerProfile::withMix);
+        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 2, "pvvoicechanger.slider.gain", 0.40D, 2.50D, VoiceChangerProfile::gain, VoiceChangerProfile::withGain);
+        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 3, "pvvoicechanger.slider.pitch", 0.55D, 2.20D, VoiceChangerProfile::pitch, VoiceChangerProfile::withPitch);
+        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 4, "pvvoicechanger.slider.formant", 0.45D, 2.00D, VoiceChangerProfile::formant, VoiceChangerProfile::withFormant);
+        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 5, "pvvoicechanger.slider.low_eq", -10.0D, 10.0D, VoiceChangerProfile::lowEq, VoiceChangerProfile::withLowEq);
+        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 6, "pvvoicechanger.slider.mid_eq", -10.0D, 10.0D, VoiceChangerProfile::midEq, VoiceChangerProfile::withMidEq);
+        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 7, "pvvoicechanger.slider.high_eq", -10.0D, 10.0D, VoiceChangerProfile::highEq, VoiceChangerProfile::withHighEq);
+        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 8, "pvvoicechanger.slider.autotune_mix", 0.0D, 1.0D, VoiceChangerProfile::autotuneMix, VoiceChangerProfile::withAutotuneMix);
+        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 9, "pvvoicechanger.slider.autotune_strength", 0.0D, 1.0D, VoiceChangerProfile::autotuneStrength, VoiceChangerProfile::withAutotuneStrength);
 
-        addProfileSlider(layout.right(), sliderTop, "pvvoicechanger.slider.distortion", 0.0D, 0.75D, VoiceChangerProfile::distortion, (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), profile.pitch(), profile.formant(), value, profile.robotMix(), profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), profile.midEq(), profile.highEq(), profile.noise()));
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT, "pvvoicechanger.slider.noise", 0.0D, 0.60D, VoiceChangerProfile::noise, (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), profile.pitch(), profile.formant(), profile.distortion(), profile.robotMix(), profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), profile.midEq(), profile.highEq(), value));
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 2, "pvvoicechanger.slider.robot_mix", 0.0D, 0.85D, VoiceChangerProfile::robotMix, (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), profile.pitch(), profile.formant(), profile.distortion(), value, profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), profile.midEq(), profile.highEq(), profile.noise()));
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 3, "pvvoicechanger.slider.robot_frequency", 20.0D, 140.0D, profile -> profile.robotFrequency(), (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), profile.pitch(), profile.formant(), profile.distortion(), profile.robotMix(), (int) Math.round(value), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), profile.midEq(), profile.highEq(), profile.noise()));
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 4, "pvvoicechanger.slider.echo_mix", 0.0D, 0.65D, VoiceChangerProfile::echoMix, (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), profile.pitch(), profile.formant(), profile.distortion(), profile.robotMix(), profile.robotFrequency(), value, profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), profile.midEq(), profile.highEq(), profile.noise()));
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 5, "pvvoicechanger.slider.echo_delay", 40.0D, 260.0D, profile -> profile.echoDelayMs(), (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), profile.pitch(), profile.formant(), profile.distortion(), profile.robotMix(), profile.robotFrequency(), profile.echoMix(), (int) Math.round(value), profile.echoFeedback(), profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), profile.midEq(), profile.highEq(), profile.noise()));
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 6, "pvvoicechanger.slider.echo_feedback", 0.0D, 0.80D, VoiceChangerProfile::echoFeedback, (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), profile.pitch(), profile.formant(), profile.distortion(), profile.robotMix(), profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), value, profile.tremoloDepth(), profile.tremoloRate(), profile.lowEq(), profile.midEq(), profile.highEq(), profile.noise()));
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 7, "pvvoicechanger.slider.tremolo_depth", 0.0D, 0.75D, VoiceChangerProfile::tremoloDepth, (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), profile.pitch(), profile.formant(), profile.distortion(), profile.robotMix(), profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), value, profile.tremoloRate(), profile.lowEq(), profile.midEq(), profile.highEq(), profile.noise()));
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 8, "pvvoicechanger.slider.tremolo_rate", 0.20D, 9.00D, VoiceChangerProfile::tremoloRate, (profile, value) ->
-                new VoiceChangerProfile(profile.mix(), profile.gain(), profile.pitch(), profile.formant(), profile.distortion(), profile.robotMix(), profile.robotFrequency(), profile.echoMix(), profile.echoDelayMs(), profile.echoFeedback(), profile.tremoloDepth(), value, profile.lowEq(), profile.midEq(), profile.highEq(), profile.noise()));
+        addProfileSlider(layout.right(), sliderTop, "pvvoicechanger.slider.distortion", 0.0D, 0.75D, VoiceChangerProfile::distortion, VoiceChangerProfile::withDistortion);
+        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT, "pvvoicechanger.slider.noise", 0.0D, 0.60D, VoiceChangerProfile::noise, VoiceChangerProfile::withNoise);
+        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 2, "pvvoicechanger.slider.robot_mix", 0.0D, 0.85D, VoiceChangerProfile::robotMix, VoiceChangerProfile::withRobotMix);
+        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 3, "pvvoicechanger.slider.robot_frequency", 20.0D, 140.0D, VoiceChangerProfile::robotFrequency, (profile, value) -> profile.withRobotFrequency((int) Math.round(value)));
+        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 4, "pvvoicechanger.slider.echo_mix", 0.0D, 0.65D, VoiceChangerProfile::echoMix, VoiceChangerProfile::withEchoMix);
+        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 5, "pvvoicechanger.slider.echo_delay", 40.0D, 260.0D, VoiceChangerProfile::echoDelayMs, (profile, value) -> profile.withEchoDelayMs((int) Math.round(value)));
+        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 6, "pvvoicechanger.slider.echo_feedback", 0.0D, 0.80D, VoiceChangerProfile::echoFeedback, VoiceChangerProfile::withEchoFeedback);
+        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 7, "pvvoicechanger.slider.tremolo_depth", 0.0D, 0.75D, VoiceChangerProfile::tremoloDepth, VoiceChangerProfile::withTremoloDepth);
+        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 8, "pvvoicechanger.slider.tremolo_rate", 0.20D, 9.00D, VoiceChangerProfile::tremoloRate, VoiceChangerProfile::withTremoloRate);
+
+        int autotuneRowY = sliderTop + ROW_HEIGHT * 9;
+        int half = (SLIDER_WIDTH - 4) / 2;
+        this.autotuneKeyButton = addRenderableWidget(Button.builder(autotuneKeyButtonText(), button -> cycleAutotuneKey())
+                .bounds(layout.right(), autotuneRowY, half, 20).build());
+        this.autotuneKeyButton.setTooltip(Tooltip.create(Component.translatable("pvvoicechanger.slider.autotune_key.desc")));
+        this.autotuneScaleButton = addRenderableWidget(Button.builder(autotuneScaleButtonText(), button -> cycleAutotuneScale())
+                .bounds(layout.right() + half + 4, autotuneRowY, SLIDER_WIDTH - half - 4, 20).build());
+        this.autotuneScaleButton.setTooltip(Tooltip.create(Component.translatable("pvvoicechanger.slider.autotune_scale.desc")));
     }
 
     private void addProfileSlider(int x, int y, String label, double min, double max, Function<VoiceChangerProfile, Number> getter, BiFunction<VoiceChangerProfile, Double, VoiceChangerProfile> setter) {
@@ -291,6 +293,44 @@ public final class VoiceChangerStudioScreen extends Screen {
         if (this.savedPresetButton != null) {
             this.savedPresetButton.setMessage(savedPresetButtonText());
         }
+        refreshAutotuneButtons();
+    }
+
+    private Component autotuneKeyButtonText() {
+        int key = ((this.addon.getCurrentProfileSnapshot().autotuneKey() % 12) + 12) % 12;
+        return Component.translatable("pvvoicechanger.studio.autotune_key_value", KEY_NAMES[key]);
+    }
+
+    private Component autotuneScaleButtonText() {
+        int scale = this.addon.getCurrentProfileSnapshot().autotuneScale();
+        String key = switch (scale) {
+            case VoiceChangerProfile.SCALE_MAJOR -> "pvvoicechanger.studio.autotune_scale.major";
+            case VoiceChangerProfile.SCALE_MINOR -> "pvvoicechanger.studio.autotune_scale.minor";
+            default -> "pvvoicechanger.studio.autotune_scale.chromatic";
+        };
+        return Component.translatable("pvvoicechanger.studio.autotune_scale_value", Component.translatable(key));
+    }
+
+    private void refreshAutotuneButtons() {
+        if (this.autotuneKeyButton != null) {
+            this.autotuneKeyButton.setMessage(autotuneKeyButtonText());
+        }
+        if (this.autotuneScaleButton != null) {
+            this.autotuneScaleButton.setMessage(autotuneScaleButtonText());
+        }
+    }
+
+    private void cycleAutotuneKey() {
+        VoiceChangerProfile profile = this.addon.getCurrentProfileSnapshot();
+        applyCustomProfile(profile.withAutotuneKey((profile.autotuneKey() + 1) % 12));
+        refreshAutotuneButtons();
+    }
+
+    private void cycleAutotuneScale() {
+        VoiceChangerProfile profile = this.addon.getCurrentProfileSnapshot();
+        int next = (profile.autotuneScale() + 1) % 3;
+        applyCustomProfile(profile.withAutotuneScale(next));
+        refreshAutotuneButtons();
     }
 
     private void cycleBuiltInPreset() {
@@ -336,6 +376,13 @@ public final class VoiceChangerStudioScreen extends Screen {
         }
 
         refreshFromAddon(false);
+    }
+
+    private void resetToPassthrough() {
+        this.addon.applyCustomProfile(VoiceChangerProfile.passthrough());
+        this.selectedSavedPreset = CURRENT_OPTION;
+        refreshFromAddon(false);
+        notifyUser(Component.translatable("pvvoicechanger.message.reset"));
     }
 
     private void notifyUser(Component message) {
