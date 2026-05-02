@@ -26,6 +26,24 @@ public record VoiceChangerProfile(
     public static final int SCALE_MAJOR = 1;
     public static final int SCALE_MINOR = 2;
 
+    /**
+     * Neutral passthrough profile: all effect amounts at zero and the
+     * wet/dry mix at {@code 0.0}, so {@link org.sawiq.client.audio.VoiceChangerAudioEngine}
+     * outputs the raw microphone signal unchanged. Used by the &quot;reset to
+     * original voice&quot; button in the studio UI.
+     */
+    public static VoiceChangerProfile passthrough() {
+        return new VoiceChangerProfile(
+                0.00D, 1.00D, 1.00D, 1.00D,
+                0.00D, 0.00D, 60,
+                0.00D, 120, 0.00D,
+                0.00D, 2.00D,
+                0.0D, 0.0D, 0.0D,
+                0.00D,
+                0.00D, 0.60D, 0, SCALE_CHROMATIC
+        );
+    }
+
     public static VoiceChangerProfile defaultsFor(VoiceChangerPreset preset) {
         return switch (preset) {
             case MAN -> new VoiceChangerProfile(0.80D, 1.08D, 0.92D, 0.92D, 0.00D, 0.00D, 40, 0.04D, 90, 0.08D, 0.00D, 2.20D, 2.2D, 0.0D, -1.2D, 0.00D, 0.00D, 0.60D, 0, SCALE_CHROMATIC);

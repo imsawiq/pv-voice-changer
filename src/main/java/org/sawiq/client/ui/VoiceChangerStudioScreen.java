@@ -107,6 +107,9 @@ public final class VoiceChangerStudioScreen extends Screen {
 
         ButtonWidget deleteButton = addDrawableChild(ButtonWidget.builder(Text.translatable("pvvoicechanger.studio.delete_saved"), button -> deleteSelectedPreset()).dimensions(layout.right(), layout.top() + 104, SLIDER_WIDTH, 20).build());
         deleteButton.setTooltip(Tooltip.of(Text.translatable("pvvoicechanger.studio.delete_saved.desc")));
+
+        ButtonWidget resetButton = addDrawableChild(ButtonWidget.builder(Text.translatable("pvvoicechanger.studio.reset"), button -> resetToPassthrough()).dimensions(layout.left(), layout.top() + 104, layout.topWidth(), 20).build());
+        resetButton.setTooltip(Tooltip.of(Text.translatable("pvvoicechanger.studio.reset.desc")));
     }
 
     private void initSliders(StudioLayout layout) {
@@ -372,6 +375,13 @@ public final class VoiceChangerStudioScreen extends Screen {
         }
 
         refreshFromAddon(false);
+    }
+
+    private void resetToPassthrough() {
+        this.addon.applyCustomProfile(VoiceChangerProfile.passthrough());
+        this.selectedSavedPreset = CURRENT_OPTION;
+        refreshFromAddon(false);
+        notifyUser(Text.translatable("pvvoicechanger.message.reset"));
     }
 
     private void notifyUser(Text message) {

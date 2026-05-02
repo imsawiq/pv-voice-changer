@@ -1,26 +1,42 @@
 package org.sawiq.client.audio;
 
+import org.sawiq.client.audio.dsp.SmbPitchShifter;
+import org.sawiq.client.audio.dsp.YinDetector;
 import org.sawiq.client.model.VoiceChangerProfile;
 
 /**
- * Real-time autotune: detects the fundamental frequency with a YIN-style
- * autocorrelation, snaps it to the nearest note in the chosen scale, and
- * applies a continuously updated PSOLA-style pitch shift to drive the
- * detected pitch toward that target. Mono and stereo inputs are processed
- * with independent state per channel.
+ * Real-time autotune driven by an in-tree implementation of two well-known
+ * algorithms:
+ *
+ * <ul>
+ *   <li>{@link YinDetector} &mdash; YIN F0 estimator
+ *       (de Cheveign&eacute; &amp; Kawahara, 2002).</li>
+ *   <li>{@link SmbPitchShifter} &mdash; STFT phase vocoder
+ *       (Bernsee's smbPitchShift, &quot;Wide Open License&quot;, re-implemented
+ *       independently from the algorithm description on dspdimension.com).</li>
+ * </ul>
+ *
+ * <p>Both algorithm families are public-domain mathematical recipes that have
+ * been published in academic and industry references; this class merely wires
+ * the streaming buffers, applies a musical-scale snap, smooths the ratio to
+ * give the user a glide-vs-snap control, and mixes the wet/dry signal.</p>
  */
 final class VoiceChangerAutotune {
-    private static final double SAMPLE_RATE = 48_000.0D;
+    static final float SAMPLE_RATE = 48_000f;
+    static final int FFT_SIZE = 1024;
+    static final int OVERLAP = 768;
+    static final int STEP_SIZE = FFT_SIZE - OVERLAP; // 256
+    static final int DRY_DELAY = OVERLAP;            // matches phase-vocoder latency
+    static final int OUT_QUEUE = FFT_SIZE * 2;
+    /**
+     * Run the YIN detector once every {@value} STFT cycles (i.e. once per
+     * {@code DETECT_EVERY_N_CYCLES * STEP_SIZE} samples). At 48 kHz with the
+     * default constants this is ~47 detections per second, well above the
+     * rate at which a sung F0 actually changes, while keeping the cost of
+     * the O(N²/4) YIN difference function out of the hot path.
+     */
+    static final int DETECT_EVERY_N_CYCLES = 4;
 
-    static final int FRAME_SIZE = 1024;
-    static final int HOP_SIZE = 256;
-    static final int MIN_PERIOD = 50;   // ~960 Hz
-    static final int MAX_PERIOD = 600;  // ~80 Hz
-    static final int PSOLA_BUFFER = 4096;
-    static final int PSOLA_DELAY = 1440;
-    static final int PSOLA_WINDOW = 960;
-
-    private static final double YIN_THRESHOLD = 0.15D;
     private static final double MIN_RATIO = 0.50D;
     private static final double MAX_RATIO = 2.00D;
     private static final double SILENCE_RMS = 0.0025D;
@@ -41,67 +57,121 @@ final class VoiceChangerAutotune {
         state.prepare(channels);
         int[] scale = scaleFor(profile.autotuneScale());
         int rootPc = ((profile.autotuneKey() % 12) + 12) % 12;
-        double snapAlpha = 0.005D + clamp01(profile.autotuneStrength()) * 0.45D;
+        double strength = clamp01(profile.autotuneStrength());
+        // Ratio time-constant: 250 ms slow glide -> 0.1 ms instant lock.
+        // Applied once per STEP_SIZE samples (the rate at which a new ratio
+        // is set on the pitch shifter). The cubic curve gives most of the
+        // useful range to the user-facing strength slider in [0.3, 1.0].
+        double tc = 0.0001D + 0.250D * Math.pow(1.0D - strength, 3.0D);
+        double snapAlphaPerStep = 1.0D - Math.exp(-STEP_SIZE / (SAMPLE_RATE * tc));
+
+        // Equal-power crossfade gains. The phase-vocoder output is largely
+        // uncorrelated with the dry signal (random phase relationship), so a
+        // linear (mix, 1-mix) law produces an audible -3 dB dip around
+        // mix = 0.5. The constant-power cos/sin law keeps perceived loudness
+        // flat across the whole mix range. We pre-compute the gain pair once
+        // per process() call since the mix amount is constant for the block.
+        double dryGainOn = Math.cos(mix * Math.PI / 2.0);
+        double wetGainOn = Math.sin(mix * Math.PI / 2.0);
 
         for (int i = 0; i < samples.length; i++) {
-            int channel = i % channels;
-            double dry = samples[i] / 32768.0D;
+            int ch = i % channels;
+            float dryIn = samples[i] / 32768f;
 
-            // feed analysis ring buffer
-            float[] analysis = state.analysis[channel];
-            int aw = state.analysisWrite[channel];
-            analysis[aw] = (float) dry;
-            state.analysisWrite[channel] = (aw + 1) % analysis.length;
-            state.hopCounter[channel]++;
+            // 1) Dry delay line aligned with the pitch-shifter latency.
+            float dry = state.dryDelay[ch][state.dryDelayPos[ch]];
+            state.dryDelay[ch][state.dryDelayPos[ch]] = dryIn;
+            state.dryDelayPos[ch] = (state.dryDelayPos[ch] + 1) % DRY_DELAY;
 
-            if (state.hopCounter[channel] >= HOP_SIZE) {
-                state.hopCounter[channel] = 0;
-                double detected = detectPitch(analysis, state.analysisWrite[channel], state.yinDiff[channel]);
-                if (detected > 0.0D) {
-                    double targetHz = snapToScale(detected, rootPc, scale);
-                    double rawRatio = clamp(targetHz / detected, MIN_RATIO, MAX_RATIO);
-                    state.targetRatio[channel] = rawRatio;
-                    state.hasTarget[channel] = true;
-                } else {
-                    state.targetRatio[channel] = 1.0D;
-                }
+            // 2) Slide the input ring forward by one sample.
+            state.inputRing[ch][state.inputWritePos[ch]] = dryIn;
+            state.inputWritePos[ch] = (state.inputWritePos[ch] + 1) % FFT_SIZE;
+            state.pendingFill[ch]++;
+            state.samplesSeen[ch]++;
+
+            // 3) Update RMS used for the silence gate.
+            double r = state.rms[ch] * 0.995D + dryIn * dryIn * 0.005D;
+            state.rms[ch] = r;
+
+            // 4) Run an STFT cycle once we have STEP_SIZE new samples and at
+            //    least one full FFT_SIZE window of history.
+            if (state.pendingFill[ch] >= STEP_SIZE && state.samplesSeen[ch] >= FFT_SIZE) {
+                state.pendingFill[ch] -= STEP_SIZE;
+                boolean runDetector = (state.cycleCounter[ch]++ % DETECT_EVERY_N_CYCLES) == 0;
+                runStftCycle(state, ch, rootPc, scale, snapAlphaPerStep, runDetector);
             }
 
-            double target = state.hasTarget[channel] ? state.targetRatio[channel] : 1.0D;
-            state.smoothedRatio[channel] += snapAlpha * (target - state.smoothedRatio[channel]);
-            double ratio = clamp(state.smoothedRatio[channel], MIN_RATIO, MAX_RATIO);
+            // 5) Pop one wet sample from the queue (or fall back to dry while
+            //    the pipeline is still warming up).
+            float wet;
+            if (state.outQueueCount[ch] > 0) {
+                wet = state.outQueue[ch][state.outQueueRead[ch]];
+                state.outQueueRead[ch] = (state.outQueueRead[ch] + 1) % OUT_QUEUE;
+                state.outQueueCount[ch]--;
+            } else {
+                wet = dry;
+            }
 
-            // PSOLA-style dual-grain shifter driven by the dynamic ratio
-            float[] grainBuf = state.grainBuffer[channel];
-            int gw = state.grainWrite[channel];
-            grainBuf[gw] = (float) dry;
-
-            double phaseA = wrap01(state.grainPhase[channel]);
-            double phaseB = wrap01(phaseA + 0.5D);
-            double delayA = PSOLA_DELAY + phaseA * PSOLA_WINDOW;
-            double delayB = PSOLA_DELAY + phaseB * PSOLA_WINDOW;
-
-            double sampleA = readDelayed(grainBuf, gw, delayA);
-            double sampleB = readDelayed(grainBuf, gw, delayB);
-            double envA = triangleWindow(phaseA);
-            double envB = triangleWindow(phaseB);
-            double envSum = Math.max(0.0001D, envA + envB);
-            double shifted = (sampleA * envA + sampleB * envB) / envSum;
-
-            state.grainWrite[channel] = (gw + 1) % grainBuf.length;
-            state.grainPhase[channel] = wrap01(phaseA + (1.0D - ratio) / PSOLA_WINDOW);
-
-            // gate output to dry on near-silence to avoid hiss artefacts
-            double rms = state.rms[channel];
-            rms = rms * 0.995D + dry * dry * 0.005D;
-            state.rms[channel] = rms;
-            double gate = Math.sqrt(rms) < SILENCE_RMS ? 0.0D : 1.0D;
-
-            double wet = clamp(shifted, -1.0D, 1.0D);
-            double blended = dry * (1.0D - mix * gate) + wet * (mix * gate);
+            // Apply the equal-power gains only when the input is above the
+            // silence floor; below it we pass dry through to keep room tone
+            // free of pitch-shifter artefacts.
+            double blended;
+            if (Math.sqrt(r) < SILENCE_RMS) {
+                blended = dry;
+            } else {
+                blended = dry * dryGainOn + wet * wetGainOn;
+            }
             samples[i] = (short) Math.round(clamp(blended, -1.0D, 1.0D) * 32767.0D);
         }
     }
+
+    private static void runStftCycle(AutotuneState state, int ch, int rootPc, int[] scale, double snapAlpha, boolean runDetector) {
+        // Snapshot the input ring into a flat window for YIN + FFT.
+        float[] ring = state.inputRing[ch];
+        float[] flat = state.flatWindow[ch];
+        int start = state.inputWritePos[ch];
+        int firstChunk = FFT_SIZE - start;
+        System.arraycopy(ring, start, flat, 0, firstChunk);
+        if (firstChunk < FFT_SIZE) {
+            System.arraycopy(ring, 0, flat, firstChunk, FFT_SIZE - firstChunk);
+        }
+
+        // Detect F0 (Hz). YIN returns -1 for unvoiced/quiet frames. We re-run
+        // it only every DETECT_EVERY_N_CYCLES cycles to keep the O(N²/4)
+        // difference function out of the hot path; the most recent target
+        // ratio is held between detections.
+        if (runDetector) {
+            float pitchHz = state.detectors[ch].getPitch(flat);
+            if (pitchHz > 0f && Math.sqrt(state.rms[ch]) >= SILENCE_RMS) {
+                double targetHz = snapToScale(pitchHz, rootPc, scale);
+                state.targetRatio[ch] = clamp(targetHz / pitchHz, MIN_RATIO, MAX_RATIO);
+            } else {
+                state.targetRatio[ch] = 1.0D;
+            }
+        }
+        state.currentRatio[ch] += snapAlpha * (state.targetRatio[ch] - state.currentRatio[ch]);
+        double ratio = clamp(state.currentRatio[ch], MIN_RATIO, MAX_RATIO);
+
+        // Phase vocoder cycle.
+        SmbPitchShifter shifter = state.shifters[ch];
+        shifter.setPitchRatio((float) ratio);
+        shifter.process(flat, state.outBlock[ch]);
+
+        // Push stepSize fresh samples to the FIFO.
+        float[] outBlock = state.outBlock[ch];
+        float[] queue = state.outQueue[ch];
+        int writePos = state.outQueueWrite[ch];
+        for (int k = 0; k < STEP_SIZE; k++) {
+            queue[writePos] = outBlock[k];
+            writePos = (writePos + 1) % OUT_QUEUE;
+        }
+        state.outQueueWrite[ch] = writePos;
+        state.outQueueCount[ch] = Math.min(OUT_QUEUE, state.outQueueCount[ch] + STEP_SIZE);
+    }
+
+    // ---------------------------------------------------------------------
+    // Scale snapping
+    // ---------------------------------------------------------------------
 
     private static int[] scaleFor(int scaleId) {
         return switch (scaleId) {
@@ -144,112 +214,6 @@ final class VoiceChangerAutotune {
         return aroundMidi + diff;
     }
 
-    /**
-     * YIN-style fundamental frequency detector over the latest FRAME_SIZE
-     * samples in the ring buffer. Returns 0 when the signal is too quiet
-     * or no clear period is found.
-     */
-    private static double detectPitch(float[] ring, int writeCursor, float[] diffBuffer) {
-        int n = ring.length;
-        // pre-compute RMS on the analysis window to suppress silence
-        double energy = 0.0D;
-        for (int i = 0; i < FRAME_SIZE; i++) {
-            int idx = (writeCursor - FRAME_SIZE + i + n) % n;
-            float v = ring[idx];
-            energy += v * v;
-        }
-        double rms = Math.sqrt(energy / FRAME_SIZE);
-        if (rms < SILENCE_RMS) {
-            return 0.0D;
-        }
-
-        int maxTau = Math.min(MAX_PERIOD, FRAME_SIZE / 2);
-        // difference function
-        for (int tau = 0; tau <= maxTau; tau++) {
-            double sum = 0.0D;
-            for (int i = 0; i < FRAME_SIZE - tau; i++) {
-                int aIdx = (writeCursor - FRAME_SIZE + i + n) % n;
-                int bIdx = (writeCursor - FRAME_SIZE + i + tau + n) % n;
-                double delta = ring[aIdx] - ring[bIdx];
-                sum += delta * delta;
-            }
-            diffBuffer[tau] = (float) sum;
-        }
-        // cumulative mean normalized difference
-        diffBuffer[0] = 1.0F;
-        double running = 0.0D;
-        for (int tau = 1; tau <= maxTau; tau++) {
-            running += diffBuffer[tau];
-            diffBuffer[tau] = (float) (diffBuffer[tau] * tau / (running > 1e-9 ? running : 1e-9));
-        }
-        // absolute threshold
-        int chosen = -1;
-        for (int tau = MIN_PERIOD; tau <= maxTau; tau++) {
-            if (diffBuffer[tau] < YIN_THRESHOLD) {
-                while (tau + 1 <= maxTau && diffBuffer[tau + 1] < diffBuffer[tau]) {
-                    tau++;
-                }
-                chosen = tau;
-                break;
-            }
-        }
-        if (chosen < 0) {
-            // fallback: take global minimum within voice range
-            double best = Double.MAX_VALUE;
-            for (int tau = MIN_PERIOD; tau <= maxTau; tau++) {
-                if (diffBuffer[tau] < best) {
-                    best = diffBuffer[tau];
-                    chosen = tau;
-                }
-            }
-            if (chosen < 0 || best > 0.6D) {
-                return 0.0D;
-            }
-        }
-        // parabolic interpolation around chosen
-        double refined = chosen;
-        if (chosen > MIN_PERIOD && chosen < maxTau) {
-            double s0 = diffBuffer[chosen - 1];
-            double s1 = diffBuffer[chosen];
-            double s2 = diffBuffer[chosen + 1];
-            double denom = (s0 + s2 - 2.0D * s1);
-            if (Math.abs(denom) > 1e-9) {
-                refined = chosen + 0.5D * (s0 - s2) / denom;
-            }
-        }
-        if (refined <= 0.0D) {
-            return 0.0D;
-        }
-        return SAMPLE_RATE / refined;
-    }
-
-    private static double readDelayed(float[] buffer, int write, double delaySamples) {
-        double readIndex = write - delaySamples;
-        while (readIndex < 0.0D) {
-            readIndex += buffer.length;
-        }
-        int i0 = floorMod((int) Math.floor(readIndex), buffer.length);
-        int i1 = floorMod(i0 + 1, buffer.length);
-        double delta = readIndex - Math.floor(readIndex);
-        return buffer[i0] + (buffer[i1] - buffer[i0]) * delta;
-    }
-
-    private static double triangleWindow(double phase) {
-        return 1.0D - Math.abs(phase * 2.0D - 1.0D);
-    }
-
-    private static double wrap01(double value) {
-        double v = value;
-        while (v >= 1.0D) v -= 1.0D;
-        while (v < 0.0D) v += 1.0D;
-        return v;
-    }
-
-    private static int floorMod(int value, int mod) {
-        int r = value % mod;
-        return r < 0 ? r + mod : r;
-    }
-
     private static double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));
     }
@@ -258,64 +222,66 @@ final class VoiceChangerAutotune {
         return clamp(value, 0.0D, 1.0D);
     }
 
+    // ---------------------------------------------------------------------
+    // Per-instance state (one slot per channel).
+    // ---------------------------------------------------------------------
+
     static final class AutotuneState {
-        float[][] analysis = new float[1][FRAME_SIZE];
-        float[][] yinDiff = new float[1][MAX_PERIOD + 1];
-        int[] analysisWrite = new int[1];
-        int[] hopCounter = new int[1];
-        double[] targetRatio = new double[]{1.0D};
-        double[] smoothedRatio = new double[]{1.0D};
-        boolean[] hasTarget = new boolean[1];
-        double[] rms = new double[1];
-        float[][] grainBuffer = new float[1][PSOLA_BUFFER];
-        int[] grainWrite = new int[1];
-        double[] grainPhase = new double[1];
+        float[][] inputRing;
+        int[] inputWritePos;
+        int[] pendingFill;
+        long[] samplesSeen;
+        float[][] flatWindow;
+        float[][] dryDelay;
+        int[] dryDelayPos;
+        float[][] outQueue;
+        int[] outQueueRead;
+        int[] outQueueWrite;
+        int[] outQueueCount;
+        float[][] outBlock;
+        double[] rms;
+        double[] targetRatio;
+        double[] currentRatio;
+        long[] cycleCounter;
+        SmbPitchShifter[] shifters;
+        YinDetector[] detectors;
+
+        AutotuneState() {
+            allocate(1);
+        }
 
         void prepare(int channels) {
-            if (this.analysis.length == channels) {
+            if (this.inputRing != null && this.inputRing.length == channels) {
                 return;
             }
-            this.analysis = resize2D(this.analysis, channels, FRAME_SIZE);
-            this.yinDiff = resize2D(this.yinDiff, channels, MAX_PERIOD + 1);
-            this.grainBuffer = resize2D(this.grainBuffer, channels, PSOLA_BUFFER);
-            this.analysisWrite = resizeInt(this.analysisWrite, channels);
-            this.hopCounter = resizeInt(this.hopCounter, channels);
-            this.grainWrite = resizeInt(this.grainWrite, channels);
-            this.targetRatio = resizeDouble(this.targetRatio, channels, 1.0D);
-            this.smoothedRatio = resizeDouble(this.smoothedRatio, channels, 1.0D);
-            this.grainPhase = resizeDouble(this.grainPhase, channels, 0.0D);
-            this.rms = resizeDouble(this.rms, channels, 0.0D);
-            boolean[] flags = new boolean[channels];
-            for (int i = 0; i < Math.min(channels, this.hasTarget.length); i++) {
-                flags[i] = this.hasTarget[i];
-            }
-            this.hasTarget = flags;
+            allocate(channels);
         }
 
-        private static float[][] resize2D(float[][] arr, int channels, int innerLen) {
-            float[][] r = new float[channels][];
-            for (int i = 0; i < channels; i++) {
-                if (i < arr.length && arr[i] != null && arr[i].length == innerLen) {
-                    r[i] = arr[i];
-                } else {
-                    r[i] = new float[innerLen];
-                }
+        private void allocate(int channels) {
+            this.inputRing = new float[channels][FFT_SIZE];
+            this.inputWritePos = new int[channels];
+            this.pendingFill = new int[channels];
+            this.samplesSeen = new long[channels];
+            this.flatWindow = new float[channels][FFT_SIZE];
+            this.dryDelay = new float[channels][DRY_DELAY];
+            this.dryDelayPos = new int[channels];
+            this.outQueue = new float[channels][OUT_QUEUE];
+            this.outQueueRead = new int[channels];
+            this.outQueueWrite = new int[channels];
+            this.outQueueCount = new int[channels];
+            this.outBlock = new float[channels][STEP_SIZE];
+            this.rms = new double[channels];
+            this.targetRatio = new double[channels];
+            this.currentRatio = new double[channels];
+            this.cycleCounter = new long[channels];
+            this.shifters = new SmbPitchShifter[channels];
+            this.detectors = new YinDetector[channels];
+            for (int c = 0; c < channels; c++) {
+                this.targetRatio[c] = 1.0D;
+                this.currentRatio[c] = 1.0D;
+                this.shifters[c] = new SmbPitchShifter(SAMPLE_RATE, FFT_SIZE, OVERLAP);
+                this.detectors[c] = new YinDetector(SAMPLE_RATE, FFT_SIZE);
             }
-            return r;
-        }
-
-        private static int[] resizeInt(int[] arr, int size) {
-            int[] r = new int[size];
-            System.arraycopy(arr, 0, r, 0, Math.min(arr.length, size));
-            return r;
-        }
-
-        private static double[] resizeDouble(double[] arr, int size, double fill) {
-            double[] r = new double[size];
-            for (int i = 0; i < size; i++) {
-                r[i] = i < arr.length ? arr[i] : fill;
-            }
-            return r;
         }
     }
 }
