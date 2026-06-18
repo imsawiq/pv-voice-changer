@@ -451,7 +451,8 @@ public final class VoiceChangerAddon {
                 sanitize(profile.autotuneMix(), 0.00D, 0.0D, 1.0D),
                 sanitize(profile.autotuneStrength(), 0.60D, 0.0D, 1.0D),
                 clampInt(profile.autotuneKey(), 0, 11),
-                clampInt(profile.autotuneScale(), 0, 2)
+                clampInt(profile.autotuneScale(), 0, 2),
+                sanitize(profile.bitDepth(), VoiceChangerProfile.BIT_DEPTH_CLEAN, VoiceChangerProfile.BIT_DEPTH_MIN, VoiceChangerProfile.BIT_DEPTH_CLEAN)
         );
     }
 
