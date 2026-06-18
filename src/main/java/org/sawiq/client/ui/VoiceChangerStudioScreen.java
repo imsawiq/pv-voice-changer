@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -22,6 +23,14 @@ public final class VoiceChangerStudioScreen extends Screen {
     private static final int SLIDER_WIDTH = 206;
     private static final int ROW_HEIGHT = 22;
     private static final String CURRENT_OPTION = "__current__";
+
+    /**
+     * Mix level applied automatically when an effect slider is touched while the
+     * wet/dry mix sits at zero (e.g. right after &quot;reset to original voice&quot;).
+     * Without this, moving any effect slider would have no audible result
+     * because a zero mix bypasses the whole processed signal.
+     */
+    private static final double DEFAULT_AUDIBLE_MIX = 0.90D;
 
     private final Screen parent;
     private final VoiceChangerAddon addon;
@@ -116,7 +125,7 @@ public final class VoiceChangerStudioScreen extends Screen {
         int sliderTop = layout.top() + 132;
         this.strengthSlider = addDrawableChild(new StudioStrengthSlider(layout.left(), sliderTop, SLIDER_WIDTH, () -> this.addon.getStrengthEntry().value(), this.addon::setStrength));
 
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT, "pvvoicechanger.slider.mix", 0.0D, 1.0D, VoiceChangerProfile::mix, VoiceChangerProfile::withMix);
+        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT, "pvvoicechanger.slider.mix", 0.0D, 1.0D, VoiceChangerProfile::mix, VoiceChangerProfile::withMix, this::applyCustomProfile);
         addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 2, "pvvoicechanger.slider.gain", 0.40D, 2.50D, VoiceChangerProfile::gain, VoiceChangerProfile::withGain);
         addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 3, "pvvoicechanger.slider.pitch", 0.55D, 2.20D, VoiceChangerProfile::pitch, VoiceChangerProfile::withPitch);
         addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 4, "pvvoicechanger.slider.formant", 0.45D, 2.00D, VoiceChangerProfile::formant, VoiceChangerProfile::withFormant);
@@ -148,6 +157,10 @@ public final class VoiceChangerStudioScreen extends Screen {
     }
 
     private void addProfileSlider(int x, int y, String label, double min, double max, Function<VoiceChangerProfile, Number> getter, BiFunction<VoiceChangerProfile, Double, VoiceChangerProfile> setter) {
+        addProfileSlider(x, y, label, min, max, getter, setter, this::applyProfileFromSlider);
+    }
+
+    private void addProfileSlider(int x, int y, String label, double min, double max, Function<VoiceChangerProfile, Number> getter, BiFunction<VoiceChangerProfile, Double, VoiceChangerProfile> setter, Consumer<VoiceChangerProfile> consumer) {
         StudioProfileSlider slider = new StudioProfileSlider(
                 x,
                 y,
@@ -157,12 +170,26 @@ public final class VoiceChangerStudioScreen extends Screen {
                 min,
                 max,
                 this.addon::getCurrentProfileSnapshot,
-                this::applyCustomProfile,
+                consumer,
                 getter,
                 setter
         );
         this.sliders.add(slider);
         addDrawableChild(slider);
+    }
+
+    private void applyProfileFromSlider(VoiceChangerProfile profile) {
+        boolean bumpedMix = profile.mix() <= 0.001D;
+        if (bumpedMix) {
+            profile = profile.withMix(DEFAULT_AUDIBLE_MIX);
+        }
+        applyCustomProfile(profile);
+
+        if (bumpedMix) {
+            for (StudioProfileSlider slider : this.sliders) {
+                slider.refresh(profile);
+            }
+        }
     }
 
     private void applyCustomProfile(VoiceChangerProfile profile) {
@@ -382,7 +409,6 @@ public final class VoiceChangerStudioScreen extends Screen {
         this.addon.applyCustomProfile(VoiceChangerProfile.passthrough());
         this.selectedSavedPreset = CURRENT_OPTION;
         refreshFromAddon(false);
-        notifyUser(Text.translatable("pvvoicechanger.message.reset"));
     }
 
     private void notifyUser(Text message) {
