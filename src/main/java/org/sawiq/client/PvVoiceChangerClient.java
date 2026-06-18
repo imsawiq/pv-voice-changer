@@ -32,9 +32,9 @@ public class PvVoiceChangerClient implements ClientModInitializer {
             }
             VoiceChangerAddon.INSTANCE.tick();
 
-            if (this.pendingUpdate != null && !this.updateScreenShown && client.screen instanceof TitleScreen titleScreen) {
+            if (this.pendingUpdate != null && !this.updateScreenShown && client.gui.screen() instanceof TitleScreen titleScreen) {
                 this.updateScreenShown = true;
-                client.setScreen(new UpdateAvailableScreen(titleScreen, this.pendingUpdate.version(), this.pendingUpdate.url()));
+                client.setScreenAndShow(new UpdateAvailableScreen(titleScreen, this.pendingUpdate.version(), this.pendingUpdate.url()));
                 this.pendingUpdate = null;
             }
         });

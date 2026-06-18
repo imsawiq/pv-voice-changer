@@ -63,7 +63,7 @@ public final class VoiceChangerStudioScreen extends Screen {
     public void onClose() {
         this.addon.setSelfListenEnabled(false);
         if (this.minecraft != null) {
-            this.minecraft.setScreen(this.parent);
+            this.minecraft.setScreenAndShow(this.parent);
         }
     }
 

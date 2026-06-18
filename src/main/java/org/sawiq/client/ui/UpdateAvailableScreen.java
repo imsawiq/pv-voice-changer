@@ -61,9 +61,9 @@ public final class UpdateAvailableScreen extends Screen {
             return;
         }
         if (this.parent != null) {
-            this.minecraft.setScreen(this.parent);
+            this.minecraft.setScreenAndShow(this.parent);
         } else {
-            this.minecraft.setScreen(null);
+            this.minecraft.setScreenAndShow(null);
         }
     }
 }

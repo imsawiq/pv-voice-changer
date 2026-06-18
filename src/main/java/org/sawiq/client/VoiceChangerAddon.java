@@ -272,7 +272,7 @@ public final class VoiceChangerAddon {
         Hotkey hotkey = this.toggleHotkeyEntry.value();
         hotkey.clearPressListener();
         hotkey.addPressListener(action -> {
-            if (action == Hotkey.Action.DOWN && Minecraft.getInstance().screen == null) {
+            if (action == Hotkey.Action.DOWN && Minecraft.getInstance().gui.screen() == null) {
                 toggleEnabled();
             }
         });
@@ -423,7 +423,7 @@ public final class VoiceChangerAddon {
     }
 
     private boolean isStudioPreviewActive() {
-        return Minecraft.getInstance().screen instanceof VoiceChangerStudioScreen;
+        return Minecraft.getInstance().gui.screen() instanceof VoiceChangerStudioScreen;
     }
 
     private static int clampInt(int value, int min, int max) {

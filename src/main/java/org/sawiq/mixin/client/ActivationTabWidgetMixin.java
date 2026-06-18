@@ -96,7 +96,7 @@ public abstract class ActivationTabWidgetMixin extends AbstractHotKeysTabWidget 
                 tr("pvvoicechanger.tab.open_studio"),
                 button -> {
                     if (this.parent instanceof VoiceSettingsScreen settingsScreen) {
-                        Minecraft.getInstance().setScreen(new VoiceChangerStudioScreen(settingsScreen.getMinecraftScreen(), addon));
+                        Minecraft.getInstance().setScreenAndShow(new VoiceChangerStudioScreen(settingsScreen.getMinecraftScreen(), addon));
                     }
                 },
                 Button.NO_TOOLTIP
