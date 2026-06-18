@@ -61,7 +61,8 @@ final class VoiceChangerAudioEngine {
                 profile.autotuneMix() * wet,
                 profile.autotuneStrength(),
                 profile.autotuneKey(),
-                profile.autotuneScale()
+                profile.autotuneScale(),
+                mix(VoiceChangerProfile.BIT_DEPTH_CLEAN, profile.bitDepth(), wet)
         );
     }
 
@@ -145,6 +146,7 @@ final class VoiceChangerAudioEngine {
             wet = applyRobot(channel, wet, profile.robotMix(), profile.robotFrequency(), state);
             wet = applyNoise(channel, wet, profile.noise(), state);
             wet = applyDistortion(wet, profile.distortion());
+            wet = applyBitCrush(channel, wet, profile.bitDepth(), state);
             wet = applyTremolo(channel, wet, profile.tremoloDepth(), profile.tremoloRate(), state);
             wet = applySmoothing(channel, wet, profile, state);
 
@@ -285,6 +287,40 @@ final class VoiceChangerAudioEngine {
         return mix(clipped, crushed, crushMix);
     }
 
+    /**
+     * Bit crusher in the spirit of the Grallion "bit" knob: as {@code bitDepth}
+     * drops from {@link VoiceChangerProfile#BIT_DEPTH_CLEAN} toward
+     * {@link VoiceChangerProfile#BIT_DEPTH_MIN}, the signal is quantized to fewer
+     * and fewer levels (16, 8, 3 bit, ...) and progressively sample-rate reduced
+     * via a sample-and-hold, giving the chunky retro tone. At full bit depth the
+     * effect is bypassed so the voice stays clean.
+     */
+    private static double applyBitCrush(int channel, double sample, double bitDepth, VoiceChangerState state) {
+        double bits = clamp(bitDepth, VoiceChangerProfile.BIT_DEPTH_MIN, VoiceChangerProfile.BIT_DEPTH_CLEAN);
+        if (bits >= VoiceChangerProfile.BIT_DEPTH_CLEAN - 0.05D) {
+            state.crushHold[channel] = sample;
+            state.crushPhase[channel] = 0.0D;
+            return sample;
+        }
+
+        // How aggressive the crush is, 0 (clean) .. 1 (1 bit).
+        double crush = clamp01((VoiceChangerProfile.BIT_DEPTH_CLEAN - bits) / (VoiceChangerProfile.BIT_DEPTH_CLEAN - VoiceChangerProfile.BIT_DEPTH_MIN));
+
+        // Sample-rate reduction: hold the previous quantized value for a few
+        // frames. Stronger crush -> longer hold -> grittier, more "8-bit" sound.
+        double holdStep = 1.0D / (1.0D + crush * 11.0D);
+        state.crushPhase[channel] += holdStep;
+        boolean refresh = state.crushPhase[channel] >= 1.0D;
+        if (refresh) {
+            state.crushPhase[channel] -= 1.0D;
+            double levels = Math.pow(2.0D, bits);
+            double step = 2.0D / levels;
+            state.crushHold[channel] = clamp(Math.floor(sample / step + 0.5D) * step, -1.0D, 1.0D);
+        }
+
+        return state.crushHold[channel];
+    }
+
     private static double applyTremolo(int channel, double sample, double depth, double rate, VoiceChangerState state) {
         if (depth <= 0.001D) {
             return sample;
@@ -356,6 +392,8 @@ final class VoiceChangerAudioEngine {
         private double[] presence = new double[1];
         private double[] noiseBand = new double[1];
         private double[] smooth = new double[1];
+        private double[] crushHold = new double[1];
+        private double[] crushPhase = new double[1];
         private int[] noiseSeed = new int[1];
         private float[][] echoDelay = new float[1][1];
         private int[] echoCursor = new int[1];
@@ -386,6 +424,8 @@ final class VoiceChangerAudioEngine {
             this.presence = ensureSize(this.presence, channels);
             this.noiseBand = ensureSize(this.noiseBand, channels);
             this.smooth = ensureSize(this.smooth, channels);
+            this.crushHold = ensureSize(this.crushHold, channels);
+            this.crushPhase = ensureSize(this.crushPhase, channels);
             this.noiseSeed = ensureSize(this.noiseSeed, channels);
             this.echoCursor = ensureSize(this.echoCursor, channels);
             this.pitchWriteCursor = ensureSize(this.pitchWriteCursor, channels);

@@ -68,6 +68,8 @@
   "pvvoicechanger.slider.high_eq.desc": "Brightness and air. Too much can make the voice sharp or harsh.",
   "pvvoicechanger.slider.distortion": "Distortion",
   "pvvoicechanger.slider.distortion.desc": "Adds grit and saturation. Use lightly unless you want monster tones.",
+  "pvvoicechanger.slider.bit_crush": "Bit Crush",
+  "pvvoicechanger.slider.bit_crush.desc": "Reduces the voice to fewer bits (16, 8, 3...). Turn right for a crunchier, retro lo-fi sound. Full left = clean.",
   "pvvoicechanger.slider.noise": "Noise",
   "pvvoicechanger.slider.noise.desc": "Adds hiss texture. Best for radio, almost always low for normal voices.",
   "pvvoicechanger.slider.robot_mix": "Robot Mix",

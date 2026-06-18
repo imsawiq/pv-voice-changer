@@ -146,6 +146,7 @@ public final class VoiceChangerPresetStore {
         properties.setProperty("autotuneStrength", Double.toString(profile.autotuneStrength()));
         properties.setProperty("autotuneKey", Integer.toString(profile.autotuneKey()));
         properties.setProperty("autotuneScale", Integer.toString(profile.autotuneScale()));
+        properties.setProperty("bitDepth", Double.toString(profile.bitDepth()));
 
         try (OutputStream output = Files.newOutputStream(path)) {
             properties.store(output, "Plasmo Voice Changer preset");
@@ -197,7 +198,8 @@ public final class VoiceChangerPresetStore {
                 safeDouble(properties, "autotuneMix", 0.00D, 0.0D, 1.0D),
                 safeDouble(properties, "autotuneStrength", 0.60D, 0.0D, 1.0D),
                 clampInt(parseInt(properties, "autotuneKey", 0), 0, 11),
-                clampInt(parseInt(properties, "autotuneScale", 0), 0, 2)
+                clampInt(parseInt(properties, "autotuneScale", 0), 0, 2),
+                safeDouble(properties, "bitDepth", VoiceChangerProfile.BIT_DEPTH_CLEAN, VoiceChangerProfile.BIT_DEPTH_MIN, VoiceChangerProfile.BIT_DEPTH_CLEAN)
         );
     }
 
@@ -238,7 +240,8 @@ public final class VoiceChangerPresetStore {
                 safeDouble(profile.autotuneMix(), 0.00D, 0.0D, 1.0D),
                 safeDouble(profile.autotuneStrength(), 0.60D, 0.0D, 1.0D),
                 clampInt(profile.autotuneKey(), 0, 11),
-                clampInt(profile.autotuneScale(), 0, 2)
+                clampInt(profile.autotuneScale(), 0, 2),
+                safeDouble(profile.bitDepth(), VoiceChangerProfile.BIT_DEPTH_CLEAN, VoiceChangerProfile.BIT_DEPTH_MIN, VoiceChangerProfile.BIT_DEPTH_CLEAN)
         );
     }
 

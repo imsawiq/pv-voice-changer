@@ -68,6 +68,8 @@
   "pvvoicechanger.slider.high_eq.desc": "Яскравість і повітря. Забагато робить голос різким.",
   "pvvoicechanger.slider.distortion": "Дисторшн",
   "pvvoicechanger.slider.distortion.desc": "Додає бруд і сатурацію. Для звичайних голосів краще тримати низько.",
+  "pvvoicechanger.slider.bit_crush": "Біт-краш",
+  "pvvoicechanger.slider.bit_crush.desc": "Знижує розрядність голосу (16, 8, 3 біти...). Крути праворуч для хрусткого ретро lo-fi звучання. Ліворуч — чисто.",
   "pvvoicechanger.slider.noise": "Шум",
   "pvvoicechanger.slider.noise.desc": "Додає шипіння. Зазвичай потрібен тільки для рації.",
   "pvvoicechanger.slider.robot_mix": "Робо-мікс",
