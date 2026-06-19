@@ -103,6 +103,7 @@
   "pvvoicechanger.bind.listening": "Press any key...",
   "pvvoicechanger.bind.clear": "Clear",
   "category.pvvoicechanger": "Plasmo Voice Changer",
+  "pvvoicechanger.toggle": "Toggle voice changer",
   "key.pvvoicechanger.toggle": "Toggle voice changer",
   "pvvoicechanger.saved.current": "Current / Autosave",
   "pvvoicechanger.actionbar.enabled": "Voice changer enabled",

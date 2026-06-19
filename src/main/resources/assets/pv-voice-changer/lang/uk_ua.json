@@ -103,6 +103,7 @@
   "pvvoicechanger.bind.listening": "Натисни будь-яку клавішу...",
   "pvvoicechanger.bind.clear": "Очистити",
   "category.pvvoicechanger": "Plasmo Voice Changer",
+  "pvvoicechanger.toggle": "Перемкнути войсченджер",
   "key.pvvoicechanger.toggle": "Перемкнути войсченджер",
   "pvvoicechanger.saved.current": "Поточний / Автозбереження",
   "pvvoicechanger.actionbar.enabled": "Войсченджер увімкнено",
