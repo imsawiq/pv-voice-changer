@@ -67,7 +67,7 @@ final class VoiceChangerAudioEngine {
     }
 
     private static void applyPitchShifter(short[] samples, short[] output, int channels, double pitchRatio, VoiceChangerState state) {
-        double ratio = clamp(pitchRatio, 0.72D, 1.38D);
+        double ratio = clamp(pitchRatio, 0.60D, 1.70D);
         double phaseStep = (1.0D - ratio) / PITCH_WINDOW;
 
         for (int i = 0; i < samples.length; i++) {
