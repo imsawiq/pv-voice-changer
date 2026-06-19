@@ -46,7 +46,7 @@
   "pvvoicechanger.studio.delete_saved": "Удалить файл",
   "pvvoicechanger.studio.delete_saved.desc": "Удаляет выбранный файл сохранённого пресета.",
   "pvvoicechanger.studio.reset": "Сбросить к обычному голосу",
-  "pvvoicechanger.studio.reset.desc": "Ставит все ползунки в нейтральное положение — микрофон идёт напрямую без обработки.",
+  "pvvoicechanger.studio.reset.desc": "Возвращает все ползунки в нейтральное положение, чтобы любое изменение было слышно сразу. Для полностью сырого голоса выключите эффект.",
   "pvvoicechanger.message.reset": "Параметры сброшены, голос обычный.",
   "pvvoicechanger.studio.reload_list": "Обновить список",
   "pvvoicechanger.studio.hint": "Сначала выбери иконку-пресет, потом докручивай EQ и текстуру, если голос всё ещё мимо.",
