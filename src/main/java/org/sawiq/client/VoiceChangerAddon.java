@@ -29,8 +29,8 @@ import su.plo.voice.client.config.hotkey.HotkeyConfigEntry;
         id = "pv-voice-changer",
         name = "Plasmo Voice Changer",
         scope = AddonLoaderScope.CLIENT,
-        version = "1.0.0",
-        authors = {"sawiq"},
+        version = "1.4",
+        authors = {"sawiq_"},
         dependencies = {}
 )
 public final class VoiceChangerAddon {
