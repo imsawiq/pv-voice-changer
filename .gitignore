@@ -1,4 +1,23 @@
-# Project exclude paths
-/.gradle/
-/build/
-/build/classes/java/main/
+# Gradle
+.gradle/
+build/
+out/
+
+# IntelliJ IDEA / local run configs
+.idea/
+*.iml
+
+# Minecraft/Fabric runtime files
+run/
+runs/
+*.log
+*.log.gz
+hs_err_pid*
+replay_pid*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.bak
