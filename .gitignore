@@ -2,3 +2,8 @@
 /.gradle/
 /build/
 /build/classes/java/main/
+/dist/
+/versions/*/.gradle/
+/versions/*/build/
+/versions/*/run/
+/versions/*/runs/

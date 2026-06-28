@@ -8,17 +8,6 @@
 Client-side Fabric mod for **Plasmo Voice** that adds a full voice changer with built-in presets, custom tuning, and saved profiles.
 
 
-### Repository layout
-
-- `versions/fabric-26.1` - Fabric build for Minecraft 26.1
-- `versions/fabric-26.2` - Fabric build for Minecraft 26.2
-- `versions/neoforge-1.21` - NeoForge port scaffold, not included in automated builds yet
-- `versions/neoforge-26.1` - NeoForge port scaffold, not included in automated builds yet
-- `versions/neoforge-26.2` - NeoForge port scaffold, not included in automated builds yet
-- `build-version.bat fabric-26.2` - build one version
-- `build-all.bat` - build all ready Fabric versions into `dist/`
-
-
 ### ✨ Features
 
 - **Built-in voice presets** - `Man`, `Woman`, `Titan`, `Kid`, `Demon`, and `Radio`
@@ -45,17 +34,6 @@ Client-side Fabric mod for **Plasmo Voice** that adds a full voice changer with 
 # RU
 
 Клиентский Fabric-мод для **Plasmo Voice**, который добавляет полноценный войсченджер с готовыми пресетами, кастомной настройкой и сохранением профилей
-
-
-### Структура репозитория
-
-- `versions/fabric-26.1` - Fabric-сборка для Minecraft 26.1
-- `versions/fabric-26.2` - Fabric-сборка для Minecraft 26.2
-- `versions/neoforge-1.21` - заготовка под NeoForge-порт, пока не входит в автосборку
-- `versions/neoforge-26.1` - заготовка под NeoForge-порт, пока не входит в автосборку
-- `versions/neoforge-26.2` - заготовка под NeoForge-порт, пока не входит в автосборку
-- `build-version.bat fabric-26.2` - собрать одну версию
-- `build-all.bat` - собрать все готовые Fabric-версии в `dist/`
 
 
 ### ✨ Особенности
