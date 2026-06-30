@@ -102,10 +102,10 @@ public final class VoiceChangerStudioScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
         if (this.maxScroll > 0) {
             int step;
-            switch (keyCode) {
+            switch (event.key()) {
                 case 265 -> step = -ROW_HEIGHT;
                 case 264 -> step = ROW_HEIGHT;
                 case 266 -> step = -(contentBottom() - CONTENT_TOP);
@@ -120,7 +120,7 @@ public final class VoiceChangerStudioScreen extends Screen {
             }
         }
 
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
     private void initTopControls(StudioLayout layout) {
         this.presetNameField = addScrollableWidget(new EditBox(this.font, layout.left(), layout.top(), layout.fieldWidth(), 20, Component.translatable("pvvoicechanger.studio.preset_name")), layout.top());
