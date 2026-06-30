@@ -1,65 +1,57 @@
 package org.sawiq.client;
 
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.lifecycle.ClientStoppingEvent;
-import org.sawiq.PvVoiceChanger;
 import org.sawiq.client.ui.UpdateAvailableScreen;
 import org.sawiq.client.update.ModrinthVersionChecker;
 import su.plo.voice.client.ModVoiceClient;
 
-@EventBusSubscriber(modid = PvVoiceChanger.MOD_ID)
-public final class PvVoiceChangerClient {
+public class PvVoiceChangerClient implements ClientModInitializer {
     private static boolean initialized;
-    private static final ModrinthVersionChecker VERSION_CHECKER = new ModrinthVersionChecker();
-    private static ModrinthVersionChecker.Result pendingUpdate;
-    private static boolean updateScreenShown;
-    private static boolean versionCheckStarted;
+    private final ModrinthVersionChecker versionChecker = new ModrinthVersionChecker();
+    private ModrinthVersionChecker.Result pendingUpdate;
+    private boolean updateScreenShown;
 
-    private PvVoiceChangerClient() {
-    }
+    @Override
+    public void onInitializeClient() {
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (initialized || ModVoiceClient.INSTANCE == null) {
+                return;
+            }
 
-    @SubscribeEvent
-    public static void onClientTick(ClientTickEvent.Post event) {
-        Minecraft client = Minecraft.getInstance();
-
-        if (!initialized && ModVoiceClient.INSTANCE != null) {
             VoiceChangerAddon.INSTANCE.initialize(ModVoiceClient.INSTANCE);
             initialized = true;
-        }
+        });
 
-        if (!versionCheckStarted) {
-            versionCheckStarted = true;
-            VERSION_CHECKER.checkAsync().thenAccept(result -> {
-                if (result != null) {
-                    Minecraft.getInstance().execute(() -> pendingUpdate = result);
-                }
-            });
-        }
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (!initialized) {
+                return;
+            }
+            VoiceChangerAddon.INSTANCE.tick();
 
-        if (!initialized) {
-            return;
-        }
+            if (this.pendingUpdate != null && !this.updateScreenShown && client.screen instanceof TitleScreen titleScreen) {
+                this.updateScreenShown = true;
+                client.setScreen(new UpdateAvailableScreen(titleScreen, this.pendingUpdate.version(), this.pendingUpdate.url()));
+                this.pendingUpdate = null;
+            }
+        });
 
-        VoiceChangerAddon.INSTANCE.tick();
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            if (!initialized) {
+                return;
+            }
 
-        if (pendingUpdate != null && !updateScreenShown && client.screen instanceof TitleScreen titleScreen) {
-            updateScreenShown = true;
-            client.setScreen(new UpdateAvailableScreen(titleScreen, pendingUpdate.version(), pendingUpdate.url()));
-            pendingUpdate = null;
-        }
-    }
+            VoiceChangerAddon.INSTANCE.shutdown();
+            initialized = false;
+        });
 
-    @SubscribeEvent
-    public static void onClientStopping(ClientStoppingEvent event) {
-        if (!initialized) {
-            return;
-        }
-
-        VoiceChangerAddon.INSTANCE.shutdown();
-        initialized = false;
+        this.versionChecker.checkAsync().thenAccept(result -> {
+            if (result != null && Minecraft.getInstance() != null) {
+                Minecraft.getInstance().execute(() -> this.pendingUpdate = result);
+            }
+        });
     }
 }

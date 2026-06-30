@@ -5,7 +5,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
-import net.neoforged.fml.ModList;
+import net.fabricmc.loader.api.FabricLoader;
 
 public final class UpdateAvailableScreen extends Screen {
     private final Screen parent;
@@ -18,8 +18,8 @@ public final class UpdateAvailableScreen extends Screen {
         this.parent = parent;
         this.newVersion = newVersion;
         this.url = url;
-        this.currentVersion = ModList.get().getModContainerById("pv_voice_changer")
-                .map(c -> c.getModInfo().getVersion().toString())
+        this.currentVersion = FabricLoader.getInstance().getModContainer("pv-voice-changer")
+                .map(c -> c.getMetadata().getVersion().getFriendlyString())
                 .orElse("unknown");
     }
 

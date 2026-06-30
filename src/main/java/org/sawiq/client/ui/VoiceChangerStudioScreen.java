@@ -89,13 +89,35 @@ public final class VoiceChangerStudioScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (this.maxScroll > 0 && mouseY >= CONTENT_TOP && mouseY <= contentBottom()) {
+        if (this.maxScroll > 0) {
             this.scrollOffset = clamp(this.scrollOffset - (int) Math.round(verticalAmount * ROW_HEIGHT * 2), 0, this.maxScroll);
             applyScrollOffset();
             return true;
         }
 
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (this.maxScroll > 0) {
+            int step;
+            switch (keyCode) {
+                case 265 -> step = -ROW_HEIGHT;
+                case 264 -> step = ROW_HEIGHT;
+                case 266 -> step = -(contentBottom() - CONTENT_TOP);
+                case 267 -> step = contentBottom() - CONTENT_TOP;
+                default -> step = 0;
+            }
+
+            if (step != 0) {
+                this.scrollOffset = clamp(this.scrollOffset + step, 0, this.maxScroll);
+                applyScrollOffset();
+                return true;
+            }
+        }
+
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     private void initTopControls(StudioLayout layout) {

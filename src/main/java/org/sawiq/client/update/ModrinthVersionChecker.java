@@ -8,7 +8,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
-import net.neoforged.fml.ModList;
+import net.fabricmc.loader.api.FabricLoader;
 
 public final class ModrinthVersionChecker {
     private static final String MODRINTH_API = "https://api.modrinth.com/v2/project/plasmo-voice-voice-changer/version";
@@ -20,8 +20,8 @@ public final class ModrinthVersionChecker {
     private boolean checked;
 
     public ModrinthVersionChecker() {
-        this.currentVersion = ModList.get().getModContainerById("pv_voice_changer")
-                .map(c -> c.getModInfo().getVersion().toString())
+        this.currentVersion = FabricLoader.getInstance().getModContainer("pv-voice-changer")
+                .map(c -> c.getMetadata().getVersion().getFriendlyString())
                 .orElse("unknown");
     }
 
