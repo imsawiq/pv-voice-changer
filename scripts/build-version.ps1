@@ -9,6 +9,9 @@ $ErrorActionPreference = "Stop"
 
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $Targets = @{
+    "master"        = @{ Path = $Root; Version = "fabric-1.21"; Buildable = $true }
+    "1.21"          = @{ Path = $Root; Version = "fabric-1.21"; Buildable = $true }
+    "fabric-1.21"   = @{ Path = $Root; Version = "fabric-1.21"; Buildable = $true }
     "26.1"          = @{ Path = (Join-Path $Root "versions\fabric-26.1"); Version = "fabric-26.1"; Buildable = $true }
     "fabric-26.1"   = @{ Path = (Join-Path $Root "versions\fabric-26.1"); Version = "fabric-26.1"; Buildable = $true }
     "26.2"          = @{ Path = (Join-Path $Root "versions\fabric-26.2"); Version = "fabric-26.2"; Buildable = $true }
