@@ -18,7 +18,6 @@ repositories {
 
 neoForge {
     version = project.neoforge_version
-    validateAccessTransformers = true
 
     runs {
         client {
@@ -33,22 +32,36 @@ neoForge {
     }
 }
 
+dependencies {
+    implementation "maven.modrinth:plasmo-voice:${project.pv_version}"
+}
+
 processResources {
     inputs.property "version", project.version
     inputs.property "mod_id", project.mod_id
+    inputs.property "minecraft_version", project.minecraft_version
+    inputs.property "neoforge_version", project.neoforge_version
+    inputs.property "pv_version", project.pv_version
+    inputs.property "pv_dependency_version", project.findProperty("pv_dependency_version") ?: "2.1.8"
 
     filesMatching("META-INF/neoforge.mods.toml") {
-        expand "version": project.version, "mod_id": project.mod_id
+        expand "version": project.version,
+                "mod_id": project.mod_id,
+                "minecraft_version": project.minecraft_version,
+                "neoforge_version": project.neoforge_version,
+                "pv_version": project.pv_version,
+                "pv_dependency_version": project.findProperty("pv_dependency_version") ?: "2.1.8"
     }
 }
 
+def targetJavaVersion = (project.findProperty("java_version") ?: 21).toString().toInteger()
 tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"
-    it.options.release.set(25)
+    it.options.release.set(targetJavaVersion)
 }
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(25)
+    toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
     withSourcesJar()
 }
 
@@ -56,4 +69,14 @@ jar {
     from("LICENSE.txt") {
         rename { "${it}_${project.archives_base_name}" }
     }
+}
+
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            artifactId = project.archives_base_name
+            from components.java
+        }
+    }
+    repositories { }
 }

@@ -110,7 +110,7 @@ public abstract class ActivationTabWidgetMixin extends AbstractHotKeysTabWidget 
                 button -> {
                     try {
                         addon.ensurePresetDirectory();
-                        net.minecraft.util.Util.getPlatform().openPath(addon.getPresetDirectory());
+                        java.awt.Desktop.getDesktop().open(addon.getPresetDirectory().toFile());
                     } catch (java.io.IOException ignored) {
                     }
                 },

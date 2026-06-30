@@ -1,19 +1,37 @@
 modLoader = "javafml"
 loaderVersion = "[1,)"
-license = "MIT"
+license = "CC-BY-NC-SA-4.0"
+issueTrackerURL = "https://github.com/imsawiq/pv-voice-changer/issues"
 
 [[mods]]
 modId = "${mod_id}"
 version = "${version}"
 displayName = "Plasmo Voice Changer"
+description = "Client-side mod for Plasmo Voice that adds a full live voice changer with presets, custom tuning, saved profiles, self listen, and a native settings UI."
 authors = "sawiq_"
-description = '''
-Client-side Plasmo Voice voice changer port scaffold for NeoForge.
-'''
+displayURL = "https://github.com/imsawiq/pv-voice-changer"
+logoFile = "assets/pv-voice-changer/icon.png"
+
+[[mixins]]
+config = "pv-voice-changer.mixins.json"
 
 [[dependencies.${mod_id}]]
 modId = "neoforge"
 type = "required"
-versionRange = "[1,)"
+versionRange = "[${neoforge_version},)"
 ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.${mod_id}]]
+modId = "minecraft"
+type = "required"
+versionRange = "[26.2]"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.${mod_id}]]
+modId = "plasmovoice"
+type = "required"
+versionRange = "[${pv_dependency_version},)"
+ordering = "AFTER"
 side = "CLIENT"

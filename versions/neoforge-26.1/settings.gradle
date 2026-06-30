@@ -1,16 +1,9 @@
 pluginManagement {
     repositories {
         maven {
-            name = 'NeoForge'
-            url = 'https://maven.neoforged.net/releases'
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
         }
         gradlePluginPortal()
-        mavenCentral()
     }
 }
-
-plugins {
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
-}
-
-rootProject.name = 'pv-voice-changer-neoforge-26.1'

@@ -4,7 +4,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Util;
+
 import net.fabricmc.loader.api.FabricLoader;
 
 public final class UpdateAvailableScreen extends Screen {

@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "Client",
+      "presentation": {
+        "group": "Mod Development - pv-voice-changer",
+        "order": 0
+      },
+      "projectName": "pv-voice-changer",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@C:\\Users\\sawiq\\Documents\\projects\\Minecraft\\Fabric-Mods\\pv-voice-changer\\build\\moddev\\clientRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@C:\\Users\\sawiq\\Documents\\projects\\Minecraft\\Fabric-Mods\\pv-voice-changer\\build\\moddev\\clientRunVmArgs.txt",
+        "-Dfml.modFolders\u003dpv_voice_changer%%C:\\Users\\sawiq\\Documents\\projects\\Minecraft\\Fabric-Mods\\pv-voice-changer\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    }
+  ]
+}

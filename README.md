@@ -12,11 +12,11 @@ Client-side Fabric mod for **Plasmo Voice** that adds a full voice changer with 
 
 - `versions/fabric-26.1` - Fabric build for Minecraft 26.1
 - `versions/fabric-26.2` - Fabric build for Minecraft 26.2
-- `versions/neoforge-1.21` - NeoForge port scaffold, not included in automated builds yet
-- `versions/neoforge-26.1` - NeoForge port scaffold, not included in automated builds yet
-- `versions/neoforge-26.2` - NeoForge port scaffold, not included in automated builds yet
-- `build-version.bat fabric-26.2` - build one version
-- `build-all.bat` - build all ready Fabric versions into `dist/`
+- `versions/neoforge-1.21` - NeoForge build for Minecraft 1.21.8
+- `versions/neoforge-26.1` - NeoForge build for Minecraft 26.1
+- `versions/neoforge-26.2` - NeoForge build for Minecraft 26.2
+- `build-version.bat fabric-26.2` - build one version (also accepts `neoforge-1.21`, `neoforge-26.1`, `neoforge-26.2`)
+- `build-all.bat` - build all Fabric and NeoForge versions into `dist/`
 
 
 ### ✨ Features
@@ -51,11 +51,11 @@ Client-side Fabric mod for **Plasmo Voice** that adds a full voice changer with 
 
 - `versions/fabric-26.1` - Fabric-сборка для Minecraft 26.1
 - `versions/fabric-26.2` - Fabric-сборка для Minecraft 26.2
-- `versions/neoforge-1.21` - заготовка под NeoForge-порт, пока не входит в автосборку
-- `versions/neoforge-26.1` - заготовка под NeoForge-порт, пока не входит в автосборку
-- `versions/neoforge-26.2` - заготовка под NeoForge-порт, пока не входит в автосборку
-- `build-version.bat fabric-26.2` - собрать одну версию
-- `build-all.bat` - собрать все готовые Fabric-версии в `dist/`
+- `versions/neoforge-1.21` - NeoForge-сборка для Minecraft 1.21.8
+- `versions/neoforge-26.1` - NeoForge-сборка для Minecraft 26.1
+- `versions/neoforge-26.2` - NeoForge-сборка для Minecraft 26.2
+- `build-version.bat fabric-26.2` - собрать одну версию (также принимает `neoforge-1.21`, `neoforge-26.1`, `neoforge-26.2`)
+- `build-all.bat` - собрать все Fabric- и NeoForge-версии в `dist/`
 
 
 ### ✨ Особенности
