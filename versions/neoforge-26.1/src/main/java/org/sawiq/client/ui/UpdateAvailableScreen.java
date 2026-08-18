@@ -12,12 +12,14 @@ public final class UpdateAvailableScreen extends Screen {
     private final String newVersion;
     private final String currentVersion;
     private final String url;
+    private final String curseForgeUrl;
 
-    public UpdateAvailableScreen(Screen parent, String newVersion, String url) {
+    public UpdateAvailableScreen(Screen parent, String newVersion, String url, String curseForgeUrl) {
         super(Component.translatable("pvvoicechanger.update.title"));
         this.parent = parent;
         this.newVersion = newVersion;
         this.url = url;
+        this.curseForgeUrl = curseForgeUrl;
         this.currentVersion = ModList.get().getModContainerById("pv_voice_changer")
                 .map(c -> c.getModInfo().getVersion().toString())
                 .orElse("unknown");
@@ -28,18 +30,24 @@ public final class UpdateAvailableScreen extends Screen {
         int centerX = this.width / 2;
         int centerY = this.height / 2;
 
-        addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.update.open_page"), button -> {
-                    try {
-                        java.awt.Desktop.getDesktop().browse(java.net.URI.create(this.url));
-                    } catch (Exception ignored) {
-                    }
-                })
+        addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.update.open_modrinth"), button -> openUrl(this.url))
                 .bounds(centerX - 100, centerY + 24, 200, 20)
                 .build());
 
-        addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.update.dismiss"), button -> onClose())
-                .bounds(centerX - 100, centerY + 50, 200, 20)
+        addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.update.open_curseforge"), button -> openUrl(this.curseForgeUrl))
+                .bounds(centerX - 100, centerY + 48, 200, 20)
                 .build());
+
+        addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.update.dismiss"), button -> onClose())
+                .bounds(centerX - 100, centerY + 72, 200, 20)
+                .build());
+    }
+
+    private static void openUrl(String target) {
+        try {
+            java.awt.Desktop.getDesktop().browse(java.net.URI.create(target));
+        } catch (Exception ignored) {
+        }
     }
 
     @Override

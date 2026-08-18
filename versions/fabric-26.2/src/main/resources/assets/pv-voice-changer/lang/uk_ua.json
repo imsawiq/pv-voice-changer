@@ -120,6 +120,7 @@
   "pvvoicechanger.update.title": "Оновлення Plasmo Voice Changer",
   "pvvoicechanger.update.subtitle": "Доступна нова версія: %s",
   "pvvoicechanger.update.current": "Поточна версія: %s",
-  "pvvoicechanger.update.open_page": "Відкрити сторінку Modrinth",
+  "pvvoicechanger.update.open_modrinth": "Завантажити з Modrinth",
+  "pvvoicechanger.update.open_curseforge": "Завантажити з CurseForge",
   "pvvoicechanger.update.dismiss": "Закрити"
 }

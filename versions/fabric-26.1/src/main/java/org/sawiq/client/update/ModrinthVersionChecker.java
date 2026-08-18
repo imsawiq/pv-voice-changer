@@ -13,6 +13,7 @@ import net.fabricmc.loader.api.FabricLoader;
 public final class ModrinthVersionChecker {
     private static final String MODRINTH_API = "https://api.modrinth.com/v2/project/plasmo-voice-voice-changer/version";
     private static final String MODRINTH_PAGE = "https://modrinth.com/mod/plasmo-voice-voice-changer/versions";
+    private static final String CURSEFORGE_PAGE = "https://www.curseforge.com/minecraft/mc-mods/plasmo-voice-voice-changer";
     private static final int CONNECT_TIMEOUT_MS = 10000;
     private static final int READ_TIMEOUT_MS = 10000;
 
@@ -79,7 +80,7 @@ public final class ModrinthVersionChecker {
                 String versionName = latest.has("name") ? latest.get("name").getAsString() : latestVersion;
 
                 if (isNewer(latestVersion, this.currentVersion)) {
-                    return new Result(versionName, latestVersion, MODRINTH_PAGE);
+                    return new Result(versionName, latestVersion, MODRINTH_PAGE, CURSEFORGE_PAGE);
                 }
 
                 return null;
@@ -121,6 +122,6 @@ public final class ModrinthVersionChecker {
         }
     }
 
-    public record Result(String name, String version, String url) {
+    public record Result(String name, String version, String url, String curseForgeUrl) {
     }
 }

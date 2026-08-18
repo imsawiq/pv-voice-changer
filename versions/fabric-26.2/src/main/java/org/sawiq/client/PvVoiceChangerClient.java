@@ -34,7 +34,7 @@ public class PvVoiceChangerClient implements ClientModInitializer {
 
             if (this.pendingUpdate != null && !this.updateScreenShown && client.gui.screen() instanceof TitleScreen titleScreen) {
                 this.updateScreenShown = true;
-                client.setScreenAndShow(new UpdateAvailableScreen(titleScreen, this.pendingUpdate.version(), this.pendingUpdate.url()));
+                client.setScreenAndShow(new UpdateAvailableScreen(titleScreen, this.pendingUpdate.version(), this.pendingUpdate.url(), this.pendingUpdate.curseForgeUrl()));
                 this.pendingUpdate = null;
             }
         });

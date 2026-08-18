@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6
+
+### Added
+- **CurseForge download button** - The update screen now offers a CurseForge download link in addition to Modrinth. Update checks still run against Modrinth.
+
 ## 1.5
 
 ### Added

@@ -48,7 +48,7 @@ public final class PvVoiceChangerClient {
 
         if (pendingUpdate != null && !updateScreenShown && client.gui.screen() instanceof TitleScreen titleScreen) {
             updateScreenShown = true;
-            client.setScreenAndShow(new UpdateAvailableScreen(titleScreen, pendingUpdate.version(), pendingUpdate.url()));
+            client.setScreenAndShow(new UpdateAvailableScreen(titleScreen, pendingUpdate.version(), pendingUpdate.url(), pendingUpdate.curseForgeUrl()));
             pendingUpdate = null;
         }
     }
