@@ -3,8 +3,8 @@ package org.sawiq.mixin.client;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import net.minecraft.client.Minecraft;
 import org.sawiq.client.VoiceChangerAddon;
+import org.sawiq.client.compat.ClientScreens;
 import org.sawiq.client.model.VoiceChangerPreset;
 import org.sawiq.client.ui.VoiceChangerStudioScreen;
 import org.spongepowered.asm.mixin.Mixin;
@@ -36,7 +36,7 @@ public abstract class ActivationTabWidgetMixin extends AbstractHotKeysTabWidget 
 
         addon.reloadSavedPresetNames();
 
-        VoiceChangerPreset[] builtInPresets = VoiceChangerPreset.values();
+        VoiceChangerPreset[] builtInPresets = VoiceChangerPreset.selectable();
         List<String> savedPresets = addon.getSavedPresetNamesCached();
         List<McTextComponent> presetLabels = Arrays.stream(builtInPresets)
                 .map(preset -> McTextComponent.translatable(preset.getTranslationKey()))
@@ -96,7 +96,7 @@ public abstract class ActivationTabWidgetMixin extends AbstractHotKeysTabWidget 
                 tr("pvvoicechanger.tab.open_studio"),
                 button -> {
                     if (this.parent instanceof VoiceSettingsScreen settingsScreen) {
-                        Minecraft.getInstance().setScreenAndShow(new VoiceChangerStudioScreen(settingsScreen.getMinecraftScreen(), addon));
+                        ClientScreens.open(new VoiceChangerStudioScreen(settingsScreen.getMinecraftScreen(), addon));
                     }
                 },
                 Button.NO_TOOLTIP

@@ -3,7 +3,7 @@
   "id": "pv-voice-changer",
   "version": "${version}",
   "name": "Plasmo Voice Changer",
-  "description": "Client-side mod for Plasmo Voice that adds a full live voice changer with presets, custom tuning, saved profiles, self listen, and a native settings UI.",
+  "description": "Voice changer for Plasmo Voice: presets, custom tuning, saved profiles, self listen, a native settings UI, an API for other mods, and server-side policy with commands and shared voices.",
   "authors": [
     "sawiq_"
   ],
@@ -14,8 +14,11 @@
   },
   "license": "CC-BY-NC-SA-4.0",
   "icon": "assets/pv-voice-changer/icon.png",
-  "environment": "client",
+  "environment": "*",
   "entrypoints": {
+    "main": [
+      "org.sawiq.PvVoiceChanger"
+    ],
     "client": [
       "org.sawiq.client.PvVoiceChangerClient"
     ]

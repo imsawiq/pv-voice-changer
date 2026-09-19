@@ -17,7 +17,7 @@ public abstract class HudIconRendererMixin {
             )
     )
     private String pvvoicechanger$replaceActivationIcon(ClientActivation activation) {
-        if (VoiceChangerAddon.INSTANCE.isInitialized() && VoiceChangerAddon.INSTANCE.isEffectEnabled()) {
+        if (VoiceChangerAddon.INSTANCE.isInitialized() && VoiceChangerAddon.INSTANCE.isEffectActive()) {
             return "pv-voice-changer:micro.png";
         }
 

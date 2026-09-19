@@ -16,12 +16,16 @@ $Targets = @{
     "fabric-26.1"   = @{ Path = (Join-Path $Root "versions\fabric-26.1"); Version = "fabric-26.1"; Buildable = $true }
     "26.2"          = @{ Path = (Join-Path $Root "versions\fabric-26.2"); Version = "fabric-26.2"; Buildable = $true }
     "fabric-26.2"   = @{ Path = (Join-Path $Root "versions\fabric-26.2"); Version = "fabric-26.2"; Buildable = $true }
+    "26.3"          = @{ Path = (Join-Path $Root "versions\fabric-26.3"); Version = "fabric-26.3"; Buildable = $true }
+    "fabric-26.3"   = @{ Path = (Join-Path $Root "versions\fabric-26.3"); Version = "fabric-26.3"; Buildable = $true }
     "neoforge-1.21" = @{ Path = (Join-Path $Root "versions\neoforge-1.21"); Version = "neoforge-1.21"; Buildable = $true }
     "nf-1.21"       = @{ Path = (Join-Path $Root "versions\neoforge-1.21"); Version = "neoforge-1.21"; Buildable = $true }
     "neoforge-26.1" = @{ Path = (Join-Path $Root "versions\neoforge-26.1"); Version = "neoforge-26.1"; Buildable = $true }
     "nf-26.1"       = @{ Path = (Join-Path $Root "versions\neoforge-26.1"); Version = "neoforge-26.1"; Buildable = $true }
     "neoforge-26.2" = @{ Path = (Join-Path $Root "versions\neoforge-26.2"); Version = "neoforge-26.2"; Buildable = $true }
     "nf-26.2"       = @{ Path = (Join-Path $Root "versions\neoforge-26.2"); Version = "neoforge-26.2"; Buildable = $true }
+    "neoforge-26.3" = @{ Path = (Join-Path $Root "versions\neoforge-26.3"); Version = "neoforge-26.3"; Buildable = $true }
+    "nf-26.3"       = @{ Path = (Join-Path $Root "versions\neoforge-26.3"); Version = "neoforge-26.3"; Buildable = $true }
 }
 
 if ($Version -eq "all") {

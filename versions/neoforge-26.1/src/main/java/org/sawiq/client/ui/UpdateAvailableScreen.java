@@ -1,28 +1,33 @@
 package org.sawiq.client.ui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.Screen;
+import java.awt.Desktop;
+import java.net.URI;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import org.sawiq.client.compat.ClientScreens;
+import org.sawiq.client.compat.ModVersion;
+import org.sawiq.client.ui.compat.CompatScreen;
+import org.sawiq.client.ui.compat.StudioGraphics;
 
-import net.neoforged.fml.ModList;
+/** Shown once on the title screen when Modrinth reports a newer release. */
+public final class UpdateAvailableScreen extends CompatScreen {
+    private static final int BUTTON_WIDTH = 200;
+    private static final int BUTTON_HEIGHT = 20;
 
-public final class UpdateAvailableScreen extends Screen {
     private final Screen parent;
     private final String newVersion;
     private final String currentVersion;
-    private final String url;
+    private final String modrinthUrl;
     private final String curseForgeUrl;
 
-    public UpdateAvailableScreen(Screen parent, String newVersion, String url, String curseForgeUrl) {
+    public UpdateAvailableScreen(Screen parent, String newVersion, String modrinthUrl, String curseForgeUrl) {
         super(Component.translatable("pvvoicechanger.update.title"));
         this.parent = parent;
         this.newVersion = newVersion;
-        this.url = url;
+        this.modrinthUrl = modrinthUrl;
         this.curseForgeUrl = curseForgeUrl;
-        this.currentVersion = ModList.get().getModContainerById("pv_voice_changer")
-                .map(c -> c.getModInfo().getVersion().toString())
-                .orElse("unknown");
+        this.currentVersion = ModVersion.current();
     }
 
     @Override
@@ -30,48 +35,38 @@ public final class UpdateAvailableScreen extends Screen {
         int centerX = this.width / 2;
         int centerY = this.height / 2;
 
-        addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.update.open_modrinth"), button -> openUrl(this.url))
-                .bounds(centerX - 100, centerY + 24, 200, 20)
-                .build());
+        addButton(Component.translatable("pvvoicechanger.update.open_modrinth"), centerX, centerY + 24, () -> openUrl(this.modrinthUrl));
+        addButton(Component.translatable("pvvoicechanger.update.open_curseforge"), centerX, centerY + 48, () -> openUrl(this.curseForgeUrl));
+        addButton(Component.translatable("pvvoicechanger.update.dismiss"), centerX, centerY + 72, this::onClose);
+    }
 
-        addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.update.open_curseforge"), button -> openUrl(this.curseForgeUrl))
-                .bounds(centerX - 100, centerY + 48, 200, 20)
-                .build());
+    @Override
+    protected void paintAboveWidgets(StudioGraphics graphics, int mouseX, int mouseY) {
+        int centerX = this.width / 2;
+        int baseY = this.height / 2 - 40;
 
-        addRenderableWidget(Button.builder(Component.translatable("pvvoicechanger.update.dismiss"), button -> onClose())
-                .bounds(centerX - 100, centerY + 72, 200, 20)
+        graphics.centeredText(this.title, centerX, baseY, 0xFFFFFFFF);
+        graphics.centeredText(Component.translatable("pvvoicechanger.update.subtitle", this.newVersion), centerX, baseY + 18, 0xFF55FF55);
+        graphics.centeredText(Component.translatable("pvvoicechanger.update.current", this.currentVersion), centerX, baseY + 32, 0xFFAAAAAA);
+    }
+
+    @Override
+    public void onClose() {
+        ClientScreens.open(this.parent);
+    }
+
+    private void addButton(Component label, int centerX, int y, Runnable action) {
+        addRenderableWidget(Button.builder(label, button -> action.run())
+                .bounds(centerX - BUTTON_WIDTH / 2, y, BUTTON_WIDTH, BUTTON_HEIGHT)
                 .build());
     }
 
     private static void openUrl(String target) {
         try {
-            java.awt.Desktop.getDesktop().browse(java.net.URI.create(target));
+            Desktop.getDesktop().browse(URI.create(target));
         } catch (Exception ignored) {
+            // Nothing useful to do if the platform has no browser hook; the
+            // version number is on screen and can be looked up by hand.
         }
     }
-
-    @Override
-    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        super.extractRenderState(context, mouseX, mouseY, delta);
-
-        int centerX = this.width / 2;
-        int baseY = this.height / 2 - 40;
-
-        context.centeredText(this.font, this.title, centerX, baseY, 0xFFFFFFFF);
-        context.centeredText(this.font, Component.translatable("pvvoicechanger.update.subtitle", this.newVersion), centerX, baseY + 18, 0xFF55FF55);
-        context.centeredText(this.font, Component.translatable("pvvoicechanger.update.current", this.currentVersion), centerX, baseY + 32, 0xFFAAAAAA);
-    }
-
-    @Override
-    public void onClose() {
-        if (this.minecraft == null) {
-            return;
-        }
-        if (this.parent != null) {
-            this.minecraft.setScreen(this.parent);
-        } else {
-            this.minecraft.setScreen(null);
-        }
-    }
-
 }

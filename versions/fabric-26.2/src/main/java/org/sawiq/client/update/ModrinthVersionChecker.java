@@ -4,11 +4,12 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
-import net.fabricmc.loader.api.FabricLoader;
+import org.sawiq.client.compat.ModVersion;
 
 public final class ModrinthVersionChecker {
     private static final String MODRINTH_API = "https://api.modrinth.com/v2/project/plasmo-voice-voice-changer/version";
@@ -21,10 +22,7 @@ public final class ModrinthVersionChecker {
     private boolean checked;
 
     public ModrinthVersionChecker() {
-        this.currentVersion = FabricLoader.getInstance()
-                .getModContainer("pv-voice-changer")
-                .map(c -> c.getMetadata().getVersion().getFriendlyString())
-                .orElse("unknown");
+        this.currentVersion = ModVersion.current();
     }
 
     public CompletableFuture<Result> checkAsync() {
@@ -36,7 +34,7 @@ public final class ModrinthVersionChecker {
         return CompletableFuture.supplyAsync(() -> {
             HttpURLConnection connection = null;
             try {
-                connection = (HttpURLConnection) new URL(MODRINTH_API).openConnection();
+                connection = (HttpURLConnection) URI.create(MODRINTH_API).toURL().openConnection();
                 connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
                 connection.setReadTimeout(READ_TIMEOUT_MS);
                 connection.setRequestProperty("Accept", "application/json");
@@ -48,7 +46,7 @@ public final class ModrinthVersionChecker {
                 }
 
                 String json;
-                try (java.io.InputStream input = connection.getInputStream()) {
+                try (InputStream input = connection.getInputStream()) {
                     json = new String(input.readAllBytes(), StandardCharsets.UTF_8);
                 }
                 JsonElement root = JsonParser.parseString(json);

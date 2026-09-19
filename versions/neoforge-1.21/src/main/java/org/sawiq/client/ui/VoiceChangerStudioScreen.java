@@ -3,48 +3,123 @@ package org.sawiq.client.ui;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-
 import org.sawiq.client.VoiceChangerAddon;
+import org.sawiq.client.api.VoicePreset;
+import org.sawiq.client.audio.SelfListenMonitor;
+import org.sawiq.client.audio.VoiceDiagnostics;
+import org.sawiq.client.compat.ClientScreens;
+import org.sawiq.client.model.AutotuneScale;
 import org.sawiq.client.model.VoiceChangerPreset;
-import org.sawiq.client.model.VoiceChangerProfile;
-import org.sawiq.client.ui.widget.StudioProfileSlider;
-import org.sawiq.client.ui.widget.StudioStrengthSlider;
+import org.sawiq.client.model.VoiceParameter;
+import org.sawiq.client.model.VoiceProfile;
+import org.sawiq.client.ui.compat.CompatScreen;
+import org.sawiq.client.ui.compat.StudioGraphics;
+import org.sawiq.client.ui.widget.ParameterSlider;
+import org.sawiq.client.ui.widget.StrengthSlider;
+import org.sawiq.protocol.PolicyReason;
+import org.sawiq.protocol.VoiceSourceRule;
 
-public final class VoiceChangerStudioScreen extends Screen {
-    private static final int SLIDER_WIDTH = 206;
+/**
+ * The studio.
+ *
+ * <p>Two modes, because the audience is split. <b>Simple</b> shows the voices
+ * as a grid of buttons, one strength control and a live input meter, and is
+ * what opens by default. <b>Advanced</b> exposes every parameter, laid out
+ * automatically from {@link VoiceParameter} rather than from a hand-maintained
+ * list of ranges.</p>
+ */
+public final class VoiceChangerStudioScreen extends CompatScreen {
     private static final int ROW_HEIGHT = 22;
-    private static final int CONTENT_TOP = 22;
-    private static final int CONTENT_BOTTOM_PADDING = 34;
-    private static final String CURRENT_OPTION = "__current__";
+    private static final int WIDGET_HEIGHT = 20;
+    private static final int CONTENT_TOP = 34;
+    private static final int FOOTER_HEIGHT = 34;
+    private static final int COLUMN_WIDTH = 206;
+    private static final int COLUMN_GAP = 8;
+    private static final int PRESET_COLUMNS = 4;
+    /**
+     * Vertical space between the top row and the voice grid, reserved for the
+     * level meter, its caption and the monitor-source note. The note is only
+     * drawn sometimes, but the space is reserved unconditionally so the grid
+     * does not shift under the pointer when the monitor changes source.
+     */
+    private static final int METER_BLOCK_HEIGHT = 58;
+    private static final int METER_BAR_OFFSET = 6;
+    private static final int METER_BAR_HEIGHT = 6;
+    private static final int METER_CAPTION_OFFSET = 16;
+    private static final int METER_NOTE_OFFSET = 28;
+    private static final int METER_DIAGNOSTIC_OFFSET = 39;
+
+    private static final int KEY_UP = 265;
+    private static final int KEY_DOWN = 264;
+    private static final int KEY_PAGE_UP = 266;
+    private static final int KEY_PAGE_DOWN = 267;
+
+    private static final String CURRENT_PRESET_OPTION = "__current__";
+    private static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+
+    /** Parameters shown in the advanced view's left column, in order. */
+    private static final VoiceParameter[] LEFT_COLUMN = {
+            VoiceParameter.MIX,
+            VoiceParameter.GAIN,
+            VoiceParameter.PITCH,
+            VoiceParameter.FORMANT,
+            VoiceParameter.VOICE_MATCH,
+            VoiceParameter.GROWL,
+            VoiceParameter.LOW_EQ,
+            VoiceParameter.MID_EQ,
+            VoiceParameter.HIGH_EQ,
+            VoiceParameter.GATE,
+            VoiceParameter.DE_ESS
+    };
+
+    /** Parameters shown in the advanced view's right column, in order. */
+    private static final VoiceParameter[] RIGHT_COLUMN = {
+            VoiceParameter.RADIO,
+            VoiceParameter.DISTORTION,
+            VoiceParameter.BIT_DEPTH,
+            VoiceParameter.NOISE,
+            VoiceParameter.ROBOT_MIX,
+            VoiceParameter.ROBOT_FREQUENCY,
+            VoiceParameter.TREMOLO_DEPTH,
+            VoiceParameter.TREMOLO_RATE,
+            VoiceParameter.REVERB_MIX,
+            VoiceParameter.REVERB_SIZE,
+            VoiceParameter.REVERB_DECAY,
+            VoiceParameter.AUTOTUNE_MIX,
+            VoiceParameter.AUTOTUNE_SPEED
+    };
+
+    private enum Mode { SIMPLE, ADVANCED }
 
     private final Screen parent;
     private final VoiceChangerAddon addon;
-    private final List<StudioProfileSlider> sliders = new ArrayList<>();
-    private final List<PositionedWidget> scrollWidgets = new ArrayList<>();
-    private String selectedSavedPreset = CURRENT_OPTION;
+    private final ScrollPanel scrollPanel = new ScrollPanel();
+    private final List<ParameterSlider> parameterSliders = new ArrayList<>();
+    private final List<VoiceButton> voiceButtons = new ArrayList<>();
+    /**
+     * The contributed voices the current layout was built from. The registry
+     * hands out an immutable snapshot per change, so an identity comparison is
+     * enough to notice that a mod added or removed one while this was open.
+     */
+    private List<VoicePreset> layoutContributedVoices = List.of();
+
+    private Mode mode = Mode.SIMPLE;
+    private String selectedSavedPreset = CURRENT_PRESET_OPTION;
 
     private EditBox presetNameField;
     private Button enabledButton;
     private Button selfListenButton;
-    private Button builtInPresetButton;
     private Button savedPresetButton;
     private Button autotuneKeyButton;
     private Button autotuneScaleButton;
-    private StudioStrengthSlider strengthSlider;
-    private Component hoveredHint;
-    private int scrollOffset;
-    private int maxScroll;
-
-    private static final String[] KEY_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    private StrengthSlider strengthSlider;
+    private double meterLevel;
 
     public VoiceChangerStudioScreen(Screen parent, VoiceChangerAddon addon) {
         super(Component.translatable("pvvoicechanger.studio.title"));
@@ -52,18 +127,28 @@ public final class VoiceChangerStudioScreen extends Screen {
         this.addon = addon;
     }
 
+    // --- Screen lifecycle --------------------------------------------------
+
     @Override
     protected void init() {
-        this.clearWidgets();
-        this.sliders.clear();
-        this.scrollWidgets.clear();
+        clearWidgets();
+        this.scrollPanel.clear();
+        this.parameterSliders.clear();
+        this.voiceButtons.clear();
 
-        StudioLayout layout = new StudioLayout(this.width, this.height);
-        initTopControls(layout);
-        initSliders(layout);
-        updateScrollBounds();
-        applyScrollOffset();
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"), button -> onClose()).bounds(this.width / 2 - 60, this.height - 28, 120, 20).build());
+        this.layoutContributedVoices = this.addon.api().contributedPresets().all();
+
+        int top = CONTENT_TOP;
+        if (this.mode == Mode.SIMPLE) {
+            buildSimpleMode(top);
+        } else {
+            buildAdvancedMode(top);
+        }
+
+        this.scrollPanel.layout(CONTENT_TOP, contentBottom());
+        addRenderableWidget(Button.builder(Component.translatable("gui.done"), button -> onClose())
+                .bounds(this.width / 2 - 60, this.height - 28, 120, WIDGET_HEIGHT)
+                .build());
 
         refreshFromAddon(false);
     }
@@ -71,234 +156,367 @@ public final class VoiceChangerStudioScreen extends Screen {
     @Override
     public void onClose() {
         this.addon.setSelfListenEnabled(false);
-        if (this.minecraft != null) {
-            this.minecraft.setScreen(this.parent);
-        }
-    }
-
-    @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        this.hoveredHint = null;
-        context.fill(0, 0, this.width, this.height, 0xA0000000);
-        renderHeader(context);
-        super.render(context, mouseX, mouseY, delta);
-        renderScrollbar(context);
-        updateHoveredHint(mouseX, mouseY);
-
+        ClientScreens.open(this.parent);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (this.maxScroll > 0) {
-            this.scrollOffset = clamp(this.scrollOffset - (int) Math.round(verticalAmount * ROW_HEIGHT * 2), 0, this.maxScroll);
-            applyScrollOffset();
+        if (this.scrollPanel.scrollBy(-(int) Math.round(verticalAmount * ROW_HEIGHT * 2))) {
             return true;
         }
-
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (this.maxScroll > 0) {
-            int step;
-            switch (keyCode) {
-                case 265 -> step = -ROW_HEIGHT;
-                case 264 -> step = ROW_HEIGHT;
-                case 266 -> step = -(contentBottom() - CONTENT_TOP);
-                case 267 -> step = contentBottom() - CONTENT_TOP;
-                default -> step = 0;
-            }
-
-            if (step != 0) {
-                this.scrollOffset = clamp(this.scrollOffset + step, 0, this.maxScroll);
-                applyScrollOffset();
-                return true;
-            }
+    protected boolean onKeyPressed(int keyCode) {
+        if (!this.scrollPanel.isScrollable()) {
+            return false;
         }
 
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        int step = switch (keyCode) {
+            case KEY_UP -> -ROW_HEIGHT;
+            case KEY_DOWN -> ROW_HEIGHT;
+            case KEY_PAGE_UP -> -this.scrollPanel.viewportHeight();
+            case KEY_PAGE_DOWN -> this.scrollPanel.viewportHeight();
+            default -> 0;
+        };
+
+        return step != 0 && this.scrollPanel.scrollBy(step);
     }
-    private void initTopControls(StudioLayout layout) {
-        this.presetNameField = addScrollableWidget(new EditBox(this.font, layout.left(), layout.top(), layout.fieldWidth(), 20, Component.translatable("pvvoicechanger.studio.preset_name")), layout.top());
+
+    // --- Rendering ---------------------------------------------------------
+
+    @Override
+    protected void paintBehindWidgets(StudioGraphics graphics) {
+        graphics.fill(0, 0, this.width, this.height, 0xA0000000);
+        graphics.centeredText(this.title, this.width / 2, 12, 0xFFFFFFFF);
+
+        // Under the title in both modes: somebody whose voice changer has
+        // stopped working opens this screen first, and the answer should be
+        // the first thing here rather than something to hunt for.
+        if (!this.addon.isAllowedByServer()) {
+            graphics.centeredText(serverBlockedText(), this.width / 2, 23, 0xFFFF7777);
+        } else if (this.addon.getVoiceRule() != VoiceSourceRule.ALL) {
+            graphics.centeredText(voicesRestrictedText(), this.width / 2, 23,
+                    this.addon.isSelectedVoiceAllowed() ? 0xFFFFAA55 : 0xFFFF7777);
+        }
+    }
+
+    /**
+     * What the server allows, and — when the player's own voice is not among it
+     * — that they have to pick something else before anything is heard.
+     */
+    private Component voicesRestrictedText() {
+        Component allowed = Component.translatable(this.addon.getVoiceRule().translationKey());
+        return this.addon.isSelectedVoiceAllowed()
+                ? Component.translatable("pvvoicechanger.studio.voices_restricted", allowed)
+                : Component.translatable("pvvoicechanger.studio.voices_restricted_pick", allowed);
+    }
+
+    /** The server's own wording when it sent one, otherwise ours, translated. */
+    private Component serverBlockedText() {
+        String message = this.addon.getServerDenialMessage();
+        Component reason = message.isBlank()
+                ? Component.translatable(this.addon.getServerDenialReason().translationKey())
+                : Component.literal(message);
+        return Component.translatable("pvvoicechanger.studio.server_blocked", reason);
+    }
+
+    @Override
+    protected void paintAboveWidgets(StudioGraphics graphics, int mouseX, int mouseY) {
+        this.scrollPanel.renderScrollbar(graphics, this.width - 7);
+
+        if (this.mode == Mode.SIMPLE) {
+            renderLevelMeter(graphics);
+        }
+    }
+
+    /**
+     * Peak input level, smoothed on the way down so the bar falls at a
+     * readable speed instead of flickering at the audio block rate.
+     */
+    private void renderLevelMeter(StudioGraphics graphics) {
+        double peak = Math.min(1.0D, this.addon.getInputLevel());
+        this.meterLevel = peak > this.meterLevel ? peak : this.meterLevel * 0.90D;
+
+        int left = centeredLeft(COLUMN_WIDTH * 2 + COLUMN_GAP);
+        int right = left + COLUMN_WIDTH * 2 + COLUMN_GAP;
+        int rowBottom = CONTENT_TOP + WIDGET_HEIGHT - this.scrollPanel.scrollOffset();
+
+        int barTop = rowBottom + METER_BAR_OFFSET;
+        graphics.fill(left, barTop, right, barTop + METER_BAR_HEIGHT, 0xFF202020);
+        int filled = left + (int) ((right - left) * this.meterLevel);
+        graphics.fill(left, barTop, filled, barTop + METER_BAR_HEIGHT,
+                this.meterLevel > 0.92D ? 0xFFFF5555 : 0xFF55DD55);
+        graphics.text(Component.translatable("pvvoicechanger.studio.level"),
+                left, rowBottom + METER_CAPTION_OFFSET, 0xFFAAAAAA);
+
+        drawDiagnostics(graphics, left, rowBottom + METER_DIAGNOSTIC_OFFSET);
+
+        // The monitor never silently switches to another microphone, so the
+        // only thing worth reporting is that it could not start at all.
+        if (this.addon.getSelfListenMode() == SelfListenMonitor.Mode.UNAVAILABLE) {
+            graphics.text(Component.translatable("pvvoicechanger.studio.self_listen_unavailable"),
+                    left, rowBottom + METER_NOTE_OFFSET, 0xFFFFAA55);
+        }
+    }
+
+    /**
+     * One line saying what the chain is doing to the voice right now: the pitch
+     * it measured, where the preset is taking it, and whether microphone blocks
+     * are arriving at all. Without it, a preset that is running but inaudible
+     * looks exactly like one that never ran.
+     */
+    private void drawDiagnostics(StudioGraphics graphics, int left, int y) {
+        VoiceDiagnostics diagnostics = this.addon.getDiagnostics();
+
+        String heard = diagnostics.speakerPitchHz() > 0.0D
+                ? Math.round(diagnostics.speakerPitchHz()) + " Hz"
+                : "?";
+        String target = diagnostics.speakerPitchHz() > 0.0D
+                ? Math.round(diagnostics.targetPitchHz()) + " Hz"
+                : "?";
+
+        String line = String.format("%s -> %s   x%.2f   %d ch  %d fr  %d/s",
+                heard, target, diagnostics.appliedPitchRatio(),
+                diagnostics.channels(), diagnostics.blockFrames(), diagnostics.blocksPerSecond());
+
+        graphics.text(Component.literal(line), left, y,
+                diagnostics.isRunning() ? 0xFF88CCFF : 0xFFFF7777);
+    }
+
+    /** Rebuilds when a mod contributes or withdraws a voice while this is open. */
+    @Override
+    public void tick() {
+        super.tick();
+        if (this.addon.api().contributedPresets().all() != this.layoutContributedVoices) {
+            init();
+        }
+    }
+
+    // --- Simple mode -------------------------------------------------------
+
+    private void buildSimpleMode(int top) {
+        int fullWidth = COLUMN_WIDTH * 2 + COLUMN_GAP;
+        int left = centeredLeft(fullWidth);
+        int half = (fullWidth - COLUMN_GAP) / 2;
+
+        this.enabledButton = addScrollable(Button.builder(enabledButtonText(), button -> toggleEnabled())
+                .bounds(left, top, half, WIDGET_HEIGHT).build());
+        this.selfListenButton = addScrollable(Button.builder(selfListenButtonText(), button -> toggleSelfListen())
+                .bounds(left + half + COLUMN_GAP, top, half, WIDGET_HEIGHT).build());
+
+        int presetsTop = top + WIDGET_HEIGHT + METER_BLOCK_HEIGHT;
+        int presetRow = buildPresetGrid(left, presetsTop, fullWidth);
+
+        this.strengthSlider = addScrollable(new StrengthSlider(
+                left, presetRow, fullWidth, WIDGET_HEIGHT,
+                this.addon::getStrength, this.addon::setStrength));
+
+        int libraryRow = presetRow + ROW_HEIGHT + 4;
+        this.savedPresetButton = addScrollable(libraryWidget(
+                Button.builder(savedPresetButtonText(), button -> cycleSavedPreset())
+                        .bounds(left, libraryRow, half, WIDGET_HEIGHT).build()));
+        addScrollable(Button.builder(Component.translatable("pvvoicechanger.studio.open_folder"), button -> openPresetFolder())
+                .bounds(left + half + COLUMN_GAP, libraryRow, half, WIDGET_HEIGHT).build());
+
+        addScrollable(Button.builder(Component.translatable("pvvoicechanger.studio.advanced"), button -> switchMode(Mode.ADVANCED))
+                .bounds(left, libraryRow + ROW_HEIGHT + 4, fullWidth, WIDGET_HEIGHT).build());
+    }
+
+    /** Lays the voices out in a grid. @return the y of the row below it */
+    private int buildPresetGrid(int left, int top, int fullWidth) {
+        List<VoiceChoice> choices = voiceChoices();
+        int cellWidth = (fullWidth - COLUMN_GAP * (PRESET_COLUMNS - 1)) / PRESET_COLUMNS;
+
+        int row = 0;
+        for (int index = 0; index < choices.size(); index++) {
+            VoiceChoice choice = choices.get(index);
+            row = index / PRESET_COLUMNS;
+            int column = index % PRESET_COLUMNS;
+            int x = left + column * (cellWidth + COLUMN_GAP);
+            int y = top + row * ROW_HEIGHT;
+
+            Button button = addScrollable(Button.builder(voiceButtonText(choice), ignored -> selectVoice(choice))
+                    .bounds(x, y, cellWidth, WIDGET_HEIGHT).build());
+            if (choice.description() != null) {
+                button.setTooltip(Tooltip.create(choice.description()));
+            }
+            this.voiceButtons.add(new VoiceButton(choice, button));
+        }
+
+        return top + (row + 1) * ROW_HEIGHT + 6;
+    }
+
+    /**
+     * The built-in voices first, then whatever other mods contributed, in the
+     * order they registered. Built-ins keep their places so a mod appearing or
+     * disappearing never moves the buttons the player already knows.
+     */
+    private List<VoiceChoice> voiceChoices() {
+        VoiceSourceRule rule = this.addon.getVoiceRule();
+        List<VoiceChoice> choices = new ArrayList<>();
+
+        for (VoiceChangerPreset preset : VoiceChangerPreset.selectable()) {
+            if (!rule.allows(preset.id())) {
+                continue;
+            }
+            choices.add(new VoiceChoice(
+                    preset.id(),
+                    Component.translatable(preset.getTranslationKey()),
+                    null,
+                    () -> this.addon.applyBuiltInPreset(preset)));
+        }
+        for (VoicePreset preset : this.addon.api().contributedPresets().all()) {
+            if (!rule.allows(preset.id())) {
+                continue;
+            }
+            choices.add(new VoiceChoice(
+                    preset.id(),
+                    preset.displayName(),
+                    preset.description(),
+                    () -> this.addon.applyContributedPreset(preset)));
+        }
+        return choices;
+    }
+
+    // --- Advanced mode -----------------------------------------------------
+
+    private void buildAdvancedMode(int top) {
+        int left = centeredLeft(COLUMN_WIDTH * 2 + COLUMN_GAP);
+        int right = left + COLUMN_WIDTH + COLUMN_GAP;
+        int half = (COLUMN_WIDTH - 4) / 2;
+
+        this.presetNameField = addScrollable(new EditBox(this.font, left, top, COLUMN_WIDTH - 70, WIDGET_HEIGHT,
+                Component.translatable("pvvoicechanger.studio.preset_name")));
         this.presetNameField.setMaxLength(48);
         this.presetNameField.setValue("MyPreset");
+        addScrollable(libraryWidget(
+                Button.builder(Component.translatable("pvvoicechanger.studio.save"), button -> saveCurrentPreset())
+                        .bounds(left + COLUMN_WIDTH - 64, top, 64, WIDGET_HEIGHT).build()));
 
-        addScrollableWidget(Button.builder(Component.translatable("pvvoicechanger.studio.save"), button -> savePreset()).bounds(layout.left() + layout.fieldWidth() + 6, layout.top(), layout.buttonWidth(), 20).build(), layout.top());
+        this.savedPresetButton = addScrollable(libraryWidget(
+                Button.builder(savedPresetButtonText(), button -> cycleSavedPreset())
+                        .bounds(right, top, COLUMN_WIDTH, WIDGET_HEIGHT).build()));
 
-        this.enabledButton = addScrollableWidget(Button.builder(enabledButtonText(), button -> {
-            this.addon.setEnabled(!this.addon.getEnabledEntry().value());
-            refreshBooleanButtons();
-        }).bounds(layout.left(), layout.top() + 26, layout.topWidth(), 20).build(), layout.top() + 26);
-        this.selfListenButton = addScrollableWidget(Button.builder(selfListenButtonText(), button -> {
-            this.addon.setSelfListenEnabled(!this.addon.getSelfListenEntry().value());
-            refreshBooleanButtons();
-        }).bounds(layout.right(), layout.top() + 26, SLIDER_WIDTH, 20).build(), layout.top() + 26);
+        int secondRow = top + ROW_HEIGHT + 4;
+        this.enabledButton = addScrollable(Button.builder(enabledButtonText(), button -> toggleEnabled())
+                .bounds(left, secondRow, COLUMN_WIDTH, WIDGET_HEIGHT).build());
+        this.selfListenButton = addScrollable(Button.builder(selfListenButtonText(), button -> toggleSelfListen())
+                .bounds(right, secondRow, COLUMN_WIDTH, WIDGET_HEIGHT).build());
 
-        this.builtInPresetButton = addScrollableWidget(Button.builder(builtInPresetButtonText(), button -> cycleBuiltInPreset())
-                .bounds(layout.left(), layout.top() + 52, layout.topWidth(), 20).build(), layout.top() + 52);
+        int thirdRow = secondRow + ROW_HEIGHT + 4;
+        addScrollable(tuningWidget(withTooltip(
+                Button.builder(Component.translatable("pvvoicechanger.studio.reset"), button -> resetToNeutral())
+                        .bounds(left, thirdRow, COLUMN_WIDTH, WIDGET_HEIGHT).build(),
+                "pvvoicechanger.studio.reset.desc")));
+        addScrollable(libraryWidget(withTooltip(
+                Button.builder(Component.translatable("pvvoicechanger.studio.delete_saved"), button -> deleteSelectedPreset())
+                        .bounds(right, thirdRow, COLUMN_WIDTH, WIDGET_HEIGHT).build(),
+                "pvvoicechanger.studio.delete_saved.desc")));
 
-        this.savedPresetButton = addScrollableWidget(Button.builder(savedPresetButtonText(), button -> cycleSavedPreset())
-                .bounds(layout.right(), layout.top() + 52, SLIDER_WIDTH, 20).build(), layout.top() + 52);
+        int fourthRow = thirdRow + ROW_HEIGHT + 4;
+        addScrollable(Button.builder(Component.translatable("pvvoicechanger.studio.simple"), button -> switchMode(Mode.SIMPLE))
+                .bounds(left, fourthRow, COLUMN_WIDTH, WIDGET_HEIGHT).build());
+        addScrollable(Button.builder(Component.translatable("pvvoicechanger.studio.open_folder"), button -> openPresetFolder())
+                .bounds(right, fourthRow, COLUMN_WIDTH, WIDGET_HEIGHT).build());
 
-        addScrollableWidget(Button.builder(Component.translatable("pvvoicechanger.studio.open_folder"), button -> openFolder()).bounds(layout.left(), layout.top() + 78, layout.topWidth(), 20).build(), layout.top() + 78);
-        addScrollableWidget(Button.builder(Component.translatable("pvvoicechanger.studio.reload_list"), button -> refreshFromAddon(true)).bounds(layout.right(), layout.top() + 78, SLIDER_WIDTH, 20).build(), layout.top() + 78);
+        int slidersTop = fourthRow + ROW_HEIGHT + 8;
+        this.strengthSlider = addScrollable(new StrengthSlider(
+                left, slidersTop, COLUMN_WIDTH, WIDGET_HEIGHT,
+                this.addon::getStrength, this.addon::setStrength));
 
-        Button deleteButton = addScrollableWidget(Button.builder(Component.translatable("pvvoicechanger.studio.delete_saved"), button -> deleteSelectedPreset()).bounds(layout.right(), layout.top() + 104, SLIDER_WIDTH, 20).build(), layout.top() + 104);
-        deleteButton.setTooltip(Tooltip.create(Component.translatable("pvvoicechanger.studio.delete_saved.desc")));
-
-        Button resetButton = addScrollableWidget(Button.builder(Component.translatable("pvvoicechanger.studio.reset"), button -> resetToPassthrough()).bounds(layout.left(), layout.top() + 104, layout.topWidth(), 20).build(), layout.top() + 104);
-        resetButton.setTooltip(Tooltip.create(Component.translatable("pvvoicechanger.studio.reset.desc")));
-    }
-
-    private void initSliders(StudioLayout layout) {
-        int sliderTop = layout.top() + 132;
-        this.strengthSlider = addScrollableWidget(new StudioStrengthSlider(layout.left(), sliderTop, SLIDER_WIDTH, () -> this.addon.getStrengthEntry().value(), this.addon::setStrength), sliderTop);
-
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT, "pvvoicechanger.slider.mix", 0.0D, 1.0D, VoiceChangerProfile::mix, VoiceChangerProfile::withMix);
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 2, "pvvoicechanger.slider.gain", 0.40D, 2.50D, VoiceChangerProfile::gain, VoiceChangerProfile::withGain);
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 3, "pvvoicechanger.slider.pitch", 0.60D, 1.70D, VoiceChangerProfile::pitch, VoiceChangerProfile::withPitch);
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 4, "pvvoicechanger.slider.formant", 0.45D, 2.00D, VoiceChangerProfile::formant, VoiceChangerProfile::withFormant);
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 5, "pvvoicechanger.slider.low_eq", -10.0D, 10.0D, VoiceChangerProfile::lowEq, VoiceChangerProfile::withLowEq);
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 6, "pvvoicechanger.slider.mid_eq", -10.0D, 10.0D, VoiceChangerProfile::midEq, VoiceChangerProfile::withMidEq);
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 7, "pvvoicechanger.slider.high_eq", -10.0D, 10.0D, VoiceChangerProfile::highEq, VoiceChangerProfile::withHighEq);
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 8, "pvvoicechanger.slider.autotune_mix", 0.0D, 1.0D, VoiceChangerProfile::autotuneMix, VoiceChangerProfile::withAutotuneMix);
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 9, "pvvoicechanger.slider.autotune_strength", 0.0D, 1.0D, VoiceChangerProfile::autotuneStrength, VoiceChangerProfile::withAutotuneStrength);
-        addProfileSlider(layout.left(), sliderTop + ROW_HEIGHT * 10, "pvvoicechanger.slider.bit_crush", VoiceChangerProfile.BIT_DEPTH_CLEAN, VoiceChangerProfile.BIT_DEPTH_MIN, VoiceChangerProfile::bitDepth, (profile, value) -> profile.withBitDepth((double) Math.round(value)));
-
-        addProfileSlider(layout.right(), sliderTop, "pvvoicechanger.slider.distortion", 0.0D, 0.75D, VoiceChangerProfile::distortion, VoiceChangerProfile::withDistortion);
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT, "pvvoicechanger.slider.noise", 0.0D, 0.60D, VoiceChangerProfile::noise, VoiceChangerProfile::withNoise);
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 2, "pvvoicechanger.slider.robot_mix", 0.0D, 0.85D, VoiceChangerProfile::robotMix, VoiceChangerProfile::withRobotMix);
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 3, "pvvoicechanger.slider.robot_frequency", 20.0D, 140.0D, VoiceChangerProfile::robotFrequency, (profile, value) -> profile.withRobotFrequency((int) Math.round(value)));
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 4, "pvvoicechanger.slider.echo_mix", 0.0D, 0.65D, VoiceChangerProfile::echoMix, VoiceChangerProfile::withEchoMix);
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 5, "pvvoicechanger.slider.echo_delay", 40.0D, 260.0D, VoiceChangerProfile::echoDelayMs, (profile, value) -> profile.withEchoDelayMs((int) Math.round(value)));
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 6, "pvvoicechanger.slider.echo_feedback", 0.0D, 0.80D, VoiceChangerProfile::echoFeedback, VoiceChangerProfile::withEchoFeedback);
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 7, "pvvoicechanger.slider.tremolo_depth", 0.0D, 0.75D, VoiceChangerProfile::tremoloDepth, VoiceChangerProfile::withTremoloDepth);
-        addProfileSlider(layout.right(), sliderTop + ROW_HEIGHT * 8, "pvvoicechanger.slider.tremolo_rate", 0.20D, 9.00D, VoiceChangerProfile::tremoloRate, VoiceChangerProfile::withTremoloRate);
-
-        int autotuneRowY = sliderTop + ROW_HEIGHT * 9;
-        int half = (SLIDER_WIDTH - 4) / 2;
-        this.autotuneKeyButton = addScrollableWidget(Button.builder(autotuneKeyButtonText(), button -> cycleAutotuneKey())
-                .bounds(layout.right(), autotuneRowY, half, 20).build(), autotuneRowY);
-        this.autotuneKeyButton.setTooltip(Tooltip.create(Component.translatable("pvvoicechanger.slider.autotune_key.desc")));
-        this.autotuneScaleButton = addScrollableWidget(Button.builder(autotuneScaleButtonText(), button -> cycleAutotuneScale())
-                .bounds(layout.right() + half + 4, autotuneRowY, SLIDER_WIDTH - half - 4, 20).build(), autotuneRowY);
-        this.autotuneScaleButton.setTooltip(Tooltip.create(Component.translatable("pvvoicechanger.slider.autotune_scale.desc")));
-    }
-
-    private void addProfileSlider(int x, int y, String label, double min, double max, Function<VoiceChangerProfile, Number> getter, BiFunction<VoiceChangerProfile, Double, VoiceChangerProfile> setter) {
-        StudioProfileSlider slider = new StudioProfileSlider(
-                x,
-                y,
-                SLIDER_WIDTH,
-                label,
-                label + ".desc",
-                min,
-                max,
-                this.addon::getCurrentProfileSnapshot,
-                this::applyCustomProfile,
-                getter,
-                setter
-        );
-        this.sliders.add(slider);
-        addScrollableWidget(slider, y);
-    }
-
-    private <T extends AbstractWidget> T addScrollableWidget(T widget, int baseY) {
-        this.scrollWidgets.add(new PositionedWidget(widget, baseY));
-        return addRenderableWidget(widget);
-    }
-
-    private void updateScrollBounds() {
-        int contentEnd = CONTENT_TOP;
-        for (PositionedWidget positioned : this.scrollWidgets) {
-            contentEnd = Math.max(contentEnd, positioned.baseY() + positioned.widget().getHeight());
+        for (int i = 0; i < LEFT_COLUMN.length; i++) {
+            addParameterSlider(left, slidersTop + ROW_HEIGHT * (i + 1), LEFT_COLUMN[i]);
+        }
+        for (int i = 0; i < RIGHT_COLUMN.length; i++) {
+            addParameterSlider(right, slidersTop + ROW_HEIGHT * i, RIGHT_COLUMN[i]);
         }
 
-        this.maxScroll = Math.max(0, contentEnd - contentBottom());
-        this.scrollOffset = clamp(this.scrollOffset, 0, this.maxScroll);
+        int autotuneRow = slidersTop + ROW_HEIGHT * RIGHT_COLUMN.length;
+        this.autotuneKeyButton = addScrollable(tuningWidget(withTooltip(
+                Button.builder(autotuneKeyButtonText(), button -> cycleAutotuneKey())
+                        .bounds(right, autotuneRow, half, WIDGET_HEIGHT).build(),
+                VoiceParameter.AUTOTUNE_KEY.descriptionKey())));
+        this.autotuneScaleButton = addScrollable(tuningWidget(withTooltip(
+                Button.builder(autotuneScaleButtonText(), button -> cycleAutotuneScale())
+                        .bounds(right + half + 4, autotuneRow, COLUMN_WIDTH - half - 4, WIDGET_HEIGHT).build(),
+                VoiceParameter.AUTOTUNE_SCALE.descriptionKey())));
     }
 
-    private void applyScrollOffset() {
-        int bottom = contentBottom();
-        for (PositionedWidget positioned : this.scrollWidgets) {
-            AbstractWidget widget = positioned.widget();
-            int y = positioned.baseY() - this.scrollOffset;
-            widget.setY(y);
-
-            boolean visible = y + widget.getHeight() >= CONTENT_TOP && y <= bottom;
-            widget.visible = visible;
-            widget.active = visible;
+    /**
+     * Greys out everything that would tune the voice by hand.
+     *
+     * <p>The controller refuses those edits anyway; this is so the player can
+     * see that rather than watching a slider move and nothing happen.</p>
+     */
+    private <T extends AbstractWidget> T tuningWidget(T widget) {
+        if (!this.addon.getVoiceRule().allowsHandTuning()) {
+            widget.active = false;
+            widget.setTooltip(Tooltip.create(
+                    Component.translatable("pvvoicechanger.studio.tuning_locked")));
         }
+        return widget;
     }
 
-    private void renderScrollbar(GuiGraphics context) {
-        if (this.maxScroll <= 0) {
-            return;
+    /** Greys out the personal preset library, which a server may also withhold. */
+    private <T extends AbstractWidget> T libraryWidget(T widget) {
+        if (!this.addon.getVoiceRule().allowsPersonalPresets()) {
+            widget.active = false;
+            widget.setTooltip(Tooltip.create(
+                    Component.translatable("pvvoicechanger.studio.library_locked")));
         }
-
-        int top = CONTENT_TOP;
-        int bottom = contentBottom();
-        int trackHeight = bottom - top;
-        int thumbHeight = Math.max(18, trackHeight * trackHeight / (trackHeight + this.maxScroll));
-        int thumbTravel = Math.max(1, trackHeight - thumbHeight);
-        int thumbY = top + this.scrollOffset * thumbTravel / this.maxScroll;
-        int x = this.width - 7;
-
-        context.fill(x, top, x + 3, bottom, 0x60000000);
-        context.fill(x, thumbY, x + 3, thumbY + thumbHeight, 0xFFE0E0E0);
+        return widget;
     }
 
-    private int contentBottom() {
-        return Math.max(CONTENT_TOP + 24, this.height - CONTENT_BOTTOM_PADDING);
+    private void addParameterSlider(int x, int y, VoiceParameter parameter) {
+        ParameterSlider slider = new ParameterSlider(
+                x, y, COLUMN_WIDTH, WIDGET_HEIGHT, parameter,
+                this.addon::getPlayerProfile, this::applyCustomProfile);
+        this.parameterSliders.add(slider);
+        addScrollable(tuningWidget(slider));
     }
 
-    private static int clamp(int value, int min, int max) {
-        return Math.max(min, Math.min(max, value));
+    // --- Actions -----------------------------------------------------------
+
+    private void switchMode(Mode target) {
+        this.mode = target;
+        init();
     }
 
-    private void applyCustomProfile(VoiceChangerProfile profile) {
+    private void toggleEnabled() {
+        this.addon.setEnabled(!this.addon.getEnabledEntry().value());
+        refreshButtonLabels();
+    }
+
+    private void toggleSelfListen() {
+        this.addon.setSelfListenEnabled(!this.addon.getSelfListenEntry().value());
+        refreshButtonLabels();
+    }
+
+    private void selectVoice(VoiceChoice choice) {
+        choice.apply().run();
+        this.selectedSavedPreset = CURRENT_PRESET_OPTION;
+        refreshFromAddon(false);
+    }
+
+    private void applyCustomProfile(VoiceProfile profile) {
         this.addon.applyCustomProfile(profile);
-        this.selectedSavedPreset = CURRENT_OPTION;
+        this.selectedSavedPreset = CURRENT_PRESET_OPTION;
+        refreshButtonLabels();
     }
 
-    private void renderHeader(GuiGraphics context) {
+    private void resetToNeutral() {
+        this.addon.applyCustomProfile(VoiceProfile.neutral());
+        this.selectedSavedPreset = CURRENT_PRESET_OPTION;
+        refreshFromAddon(false);
     }
 
-    private void updateHoveredHint(int mouseX, int mouseY) {
-        if (this.strengthSlider != null && this.strengthSlider.isMouseOver(mouseX, mouseY)) {
-            this.hoveredHint = Component.translatable("pvvoicechanger.slider.strength.desc");
+    private void saveCurrentPreset() {
+        if (this.presetNameField == null) {
             return;
         }
 
-        for (StudioProfileSlider slider : this.sliders) {
-            if (slider.isMouseOver(mouseX, mouseY)) {
-                this.hoveredHint = slider.descriptionText();
-                return;
-            }
-        }
-    }
-
-    private void refreshFromAddon(boolean reloadList) {
-        if (reloadList) {
-            try {
-                this.addon.listSavedPresetNames();
-            } catch (IOException ignored) {
-            }
-        }
-
-        VoiceChangerProfile profile = this.addon.getCurrentProfileSnapshot();
-        this.selectedSavedPreset = this.addon.getSelectedSavedPresetName() == null ? CURRENT_OPTION : this.addon.getSelectedSavedPresetName();
-        refreshBooleanButtons();
-        refreshPresetButtons();
-        this.strengthSlider.refresh();
-
-        for (StudioProfileSlider slider : this.sliders) {
-            slider.refresh(profile);
-        }
-    }
-
-    private void savePreset() {
         try {
             String savedName = this.addon.saveCurrentPreset(this.presetNameField.getValue());
             this.presetNameField.setValue(savedName);
@@ -306,211 +524,187 @@ public final class VoiceChangerStudioScreen extends Screen {
             refreshFromAddon(true);
             notifyUser(Component.translatable("pvvoicechanger.message.saved", savedName));
         } catch (IOException | IllegalArgumentException exception) {
-            notifyUser(Component.translatable("pvvoicechanger.message.save_failed", exception.getMessage()));
+            notifyUser(Component.translatable("pvvoicechanger.message.save_failed", describe(exception)));
         }
     }
 
     private void deleteSelectedPreset() {
-        String selected = currentSavedSelection();
-        if (CURRENT_OPTION.equals(selected)) {
+        if (CURRENT_PRESET_OPTION.equals(this.selectedSavedPreset)) {
             notifyUser(Component.translatable("pvvoicechanger.message.select_saved_first"));
             return;
         }
 
+        String target = this.selectedSavedPreset;
         try {
-            this.addon.deleteSavedPreset(selected);
-            this.selectedSavedPreset = CURRENT_OPTION;
+            this.addon.deleteSavedPreset(target);
+            this.selectedSavedPreset = CURRENT_PRESET_OPTION;
             refreshFromAddon(true);
-            notifyUser(Component.translatable("pvvoicechanger.message.deleted", selected));
+            notifyUser(Component.translatable("pvvoicechanger.message.deleted", target));
         } catch (IOException exception) {
-            notifyUser(Component.translatable("pvvoicechanger.message.delete_failed", exception.getMessage()));
-        }
-    }
-
-    private void openFolder() {
-        try {
-            this.addon.ensurePresetDirectory();
-            java.awt.Desktop.getDesktop().open(this.addon.getPresetDirectory().toFile());
-        } catch (IOException exception) {
-            notifyUser(Component.translatable("pvvoicechanger.message.open_folder_failed", exception.getMessage()));
-        }
-    }
-
-    private List<String> savedPresetOptions() {
-        List<String> options = new ArrayList<>();
-        options.add(CURRENT_OPTION);
-        options.addAll(this.addon.getSavedPresetNamesCached());
-        return options;
-    }
-
-    private String currentSavedSelection() {
-        return this.selectedSavedPreset == null ? CURRENT_OPTION : this.selectedSavedPreset;
-    }
-
-    private Component enabledButtonText() {
-        return this.addon.getEnabledEntry().value()
-                ? Component.translatable("pvvoicechanger.studio.enabled_on")
-                : Component.translatable("pvvoicechanger.studio.enabled_off");
-    }
-
-    private Component selfListenButtonText() {
-        return this.addon.getSelfListenEntry().value()
-                ? Component.translatable("pvvoicechanger.studio.self_listen_on")
-                : Component.translatable("pvvoicechanger.studio.self_listen_off");
-    }
-
-    private void refreshBooleanButtons() {
-        if (this.enabledButton != null) {
-            this.enabledButton.setMessage(enabledButtonText());
-        }
-        if (this.selfListenButton != null) {
-            this.selfListenButton.setMessage(selfListenButtonText());
-        }
-    }
-
-    private Component builtInPresetButtonText() {
-        return Component.translatable("pvvoicechanger.studio.built_in_value", Component.translatable(this.addon.getSelectedPreset().getTranslationKey()));
-    }
-
-    private Component savedPresetButtonText() {
-        String value = currentSavedSelection();
-        Component current = CURRENT_OPTION.equals(value) ? Component.translatable("pvvoicechanger.saved.current") : Component.literal(value);
-        return Component.translatable("pvvoicechanger.studio.saved_value", current);
-    }
-
-    private void refreshPresetButtons() {
-        if (this.builtInPresetButton != null) {
-            this.builtInPresetButton.setMessage(builtInPresetButtonText());
-        }
-        if (this.savedPresetButton != null) {
-            this.savedPresetButton.setMessage(savedPresetButtonText());
-        }
-        refreshAutotuneButtons();
-    }
-
-    private Component autotuneKeyButtonText() {
-        int key = ((this.addon.getCurrentProfileSnapshot().autotuneKey() % 12) + 12) % 12;
-        return Component.translatable("pvvoicechanger.studio.autotune_key_value", KEY_NAMES[key]);
-    }
-
-    private Component autotuneScaleButtonText() {
-        int scale = this.addon.getCurrentProfileSnapshot().autotuneScale();
-        String key = switch (scale) {
-            case VoiceChangerProfile.SCALE_MAJOR -> "pvvoicechanger.studio.autotune_scale.major";
-            case VoiceChangerProfile.SCALE_MINOR -> "pvvoicechanger.studio.autotune_scale.minor";
-            default -> "pvvoicechanger.studio.autotune_scale.chromatic";
-        };
-        return Component.translatable("pvvoicechanger.studio.autotune_scale_value", Component.translatable(key));
-    }
-
-    private void refreshAutotuneButtons() {
-        if (this.autotuneKeyButton != null) {
-            this.autotuneKeyButton.setMessage(autotuneKeyButtonText());
-        }
-        if (this.autotuneScaleButton != null) {
-            this.autotuneScaleButton.setMessage(autotuneScaleButtonText());
-        }
-    }
-
-    private void cycleAutotuneKey() {
-        VoiceChangerProfile profile = this.addon.getCurrentProfileSnapshot();
-        applyCustomProfile(profile.withAutotuneKey((profile.autotuneKey() + 1) % 12));
-        refreshAutotuneButtons();
-    }
-
-    private void cycleAutotuneScale() {
-        VoiceChangerProfile profile = this.addon.getCurrentProfileSnapshot();
-        int next = (profile.autotuneScale() + 1) % 3;
-        applyCustomProfile(profile.withAutotuneScale(next));
-        refreshAutotuneButtons();
-    }
-
-    private void cycleBuiltInPreset() {
-        VoiceChangerPreset[] presets = VoiceChangerPreset.values();
-        VoiceChangerPreset current = this.addon.getSelectedPreset();
-        int currentIndex = 0;
-
-        for (int i = 0; i < presets.length; i++) {
-            if (presets[i] == current) {
-                currentIndex = i;
-                break;
-            }
-        }
-
-        for (int step = 1; step <= presets.length; step++) {
-            VoiceChangerPreset candidate = presets[(currentIndex + step) % presets.length];
-            if (candidate != VoiceChangerPreset.CUSTOM) {
-                this.addon.applyBuiltInPreset(candidate);
-                this.selectedSavedPreset = CURRENT_OPTION;
-                refreshFromAddon(false);
-                return;
-            }
+            notifyUser(Component.translatable("pvvoicechanger.message.delete_failed", describe(exception)));
         }
     }
 
     private void cycleSavedPreset() {
-        List<String> options = savedPresetOptions();
-        if (options.isEmpty()) {
-            return;
-        }
+        List<String> options = new ArrayList<>();
+        options.add(CURRENT_PRESET_OPTION);
+        options.addAll(this.addon.getSavedPresetNamesCached());
 
-        String current = currentSavedSelection();
-        int currentIndex = Math.max(0, options.indexOf(current));
+        int currentIndex = Math.max(0, options.indexOf(this.selectedSavedPreset));
         String next = options.get((currentIndex + 1) % options.size());
         this.selectedSavedPreset = next;
 
-        if (!CURRENT_OPTION.equals(next)) {
+        if (!CURRENT_PRESET_OPTION.equals(next)) {
             try {
                 this.addon.loadSavedPreset(next);
             } catch (IOException exception) {
-                notifyUser(Component.translatable("pvvoicechanger.message.load_failed", exception.getMessage()));
+                notifyUser(Component.translatable("pvvoicechanger.message.load_failed", describe(exception)));
             }
         }
 
         refreshFromAddon(false);
     }
 
-    private void resetToPassthrough() {
-        // Neutral starting point: every effect at zero but a working wet/dry mix,
-        // so the voice sounds essentially untouched yet any slider takes effect
-        // immediately. For a fully raw mic signal, disable the effect instead.
-        this.addon.applyCustomProfile(VoiceChangerProfile.passthrough().withMix(0.90D));
-        this.selectedSavedPreset = CURRENT_OPTION;
-        refreshFromAddon(false);
+    private void openPresetFolder() {
+        try {
+            this.addon.ensurePresetDirectory();
+            java.awt.Desktop.getDesktop().open(this.addon.getPresetDirectory().toFile());
+        } catch (IOException | UnsupportedOperationException exception) {
+            notifyUser(Component.translatable("pvvoicechanger.message.open_folder_failed", describe(exception)));
+        }
+    }
+
+    private void cycleAutotuneKey() {
+        VoiceProfile profile = this.addon.getPlayerProfile();
+        int next = (profile.getInt(VoiceParameter.AUTOTUNE_KEY) + 1) % NOTE_NAMES.length;
+        applyCustomProfile(profile.with(VoiceParameter.AUTOTUNE_KEY, next));
+    }
+
+    private void cycleAutotuneScale() {
+        VoiceProfile profile = this.addon.getPlayerProfile();
+        int next = (profile.getInt(VoiceParameter.AUTOTUNE_SCALE) + 1) % AutotuneScale.count();
+        applyCustomProfile(profile.with(VoiceParameter.AUTOTUNE_SCALE, next));
+    }
+
+    // --- Refreshing --------------------------------------------------------
+
+    private void refreshFromAddon(boolean reloadPresetList) {
+        if (reloadPresetList) {
+            this.addon.reloadSavedPresetNames();
+        }
+
+        String savedName = this.addon.getSelectedSavedPresetName();
+        this.selectedSavedPreset = savedName == null ? CURRENT_PRESET_OPTION : savedName;
+
+        VoiceProfile profile = this.addon.getPlayerProfile();
+        for (ParameterSlider slider : this.parameterSliders) {
+            slider.refresh(profile);
+        }
+        if (this.strengthSlider != null) {
+            this.strengthSlider.refresh();
+        }
+
+        refreshButtonLabels();
+    }
+
+    private void refreshButtonLabels() {
+        setMessageIfPresent(this.enabledButton, enabledButtonText());
+        setMessageIfPresent(this.selfListenButton, selfListenButtonText());
+        setMessageIfPresent(this.savedPresetButton, savedPresetButtonText());
+        setMessageIfPresent(this.autotuneKeyButton, autotuneKeyButtonText());
+        setMessageIfPresent(this.autotuneScaleButton, autotuneScaleButtonText());
+
+        for (VoiceButton entry : this.voiceButtons) {
+            entry.button().setMessage(voiceButtonText(entry.choice()));
+        }
+    }
+
+    // --- Labels ------------------------------------------------------------
+
+    private Component enabledButtonText() {
+        return Component.translatable(this.addon.getEnabledEntry().value()
+                ? "pvvoicechanger.studio.enabled_on"
+                : "pvvoicechanger.studio.enabled_off");
+    }
+
+    private Component selfListenButtonText() {
+        return Component.translatable(this.addon.getSelfListenEntry().value()
+                ? "pvvoicechanger.studio.self_listen_on"
+                : "pvvoicechanger.studio.self_listen_off");
+    }
+
+    private Component savedPresetButtonText() {
+        Component value = CURRENT_PRESET_OPTION.equals(this.selectedSavedPreset)
+                ? Component.translatable("pvvoicechanger.saved.current")
+                : Component.literal(this.selectedSavedPreset);
+        return Component.translatable("pvvoicechanger.studio.saved_value", value);
+    }
+
+    /** The active voice is marked in the label, since widget skins are version-specific. */
+    private Component voiceButtonText(VoiceChoice choice) {
+        boolean selected = choice.id().equals(this.addon.getSelectedVoiceId())
+                && this.addon.getSelectedSavedPresetName() == null;
+        return selected
+                ? Component.translatable("pvvoicechanger.studio.preset_selected", choice.name())
+                : choice.name();
+    }
+
+    private Component autotuneKeyButtonText() {
+        int key = this.addon.getPlayerProfile().getInt(VoiceParameter.AUTOTUNE_KEY);
+        return Component.translatable("pvvoicechanger.studio.autotune_key_value",
+                NOTE_NAMES[Math.floorMod(key, NOTE_NAMES.length)]);
+    }
+
+    private Component autotuneScaleButtonText() {
+        AutotuneScale scale = AutotuneScale.byIndex(this.addon.getPlayerProfile().getInt(VoiceParameter.AUTOTUNE_SCALE));
+        return Component.translatable("pvvoicechanger.studio.autotune_scale_value",
+                Component.translatable(scale.translationKey()));
+    }
+
+    // --- Helpers -----------------------------------------------------------
+
+    private <T extends AbstractWidget> T addScrollable(T widget) {
+        this.scrollPanel.add(widget);
+        return addRenderableWidget(widget);
+    }
+
+    private static Button withTooltip(Button button, String descriptionKey) {
+        button.setTooltip(Tooltip.create(Component.translatable(descriptionKey)));
+        return button;
+    }
+
+    private static void setMessageIfPresent(Button button, Component message) {
+        if (button != null) {
+            button.setMessage(message);
+        }
+    }
+
+    private int centeredLeft(int contentWidth) {
+        return Math.max(8, (this.width - contentWidth) / 2);
+    }
+
+    private int contentBottom() {
+        return Math.max(CONTENT_TOP + 24, this.height - FOOTER_HEIGHT);
     }
 
     private void notifyUser(Component message) {
-        if (this.minecraft != null && this.minecraft.player != null) {
-            this.minecraft.player.displayClientMessage(message, false);
-        }
+        ClientScreens.sendChatMessage(message);
     }
 
-    private record PositionedWidget(AbstractWidget widget, int baseY) {
+    private static String describe(Exception exception) {
+        String message = exception.getMessage();
+        return message == null ? exception.getClass().getSimpleName() : message;
     }
 
-    private record StudioLayout(int width, int height) {
-        private int top() {
-            return 22;
-        }
+    /**
+     * One entry in the voice grid, whether it came from this mod or another
+     * one. The grid does not care which, so it is not told.
+     *
+     * @param description tooltip text, or null for none
+     */
+    private record VoiceChoice(String id, Component name, Component description, Runnable apply) {
+    }
 
-        private int left() {
-            return Math.max(16, this.width / 2 - 216);
-        }
-
-        private int right() {
-            return this.width / 2 + 10;
-        }
-
-        private int topWidth() {
-            return 202;
-        }
-
-        private int fieldWidth() {
-            return 132;
-        }
-
-        private int buttonWidth() {
-            return 64;
-        }
+    private record VoiceButton(VoiceChoice choice, Button button) {
     }
 }

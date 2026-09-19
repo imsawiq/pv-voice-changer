@@ -19,6 +19,21 @@ repositories {
     maven { url = "https://repo.plasmoverse.com/releases" }
 }
 
+// The client and the server would otherwise share run/, where they fight over
+// logs/latest.log: starting one while the other is running kills it. Separate
+// directories are what make it possible to test a client against a local
+// server at all.
+loom {
+    runs {
+        client {
+            runDir = "run-client"
+        }
+        server {
+            runDir = "run-server"
+        }
+    }
+}
+
 dependencies {
     // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"

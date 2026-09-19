@@ -3,7 +3,14 @@
 /build/
 /build/classes/java/main/
 /dist/
+/run/
+/run-client/
+/run-server/
 /versions/*/.gradle/
 /versions/*/build/
 /versions/*/run/
 /versions/*/runs/
+
+# Eclipse/VS Code Java output
+/bin/
+/versions/*/bin/

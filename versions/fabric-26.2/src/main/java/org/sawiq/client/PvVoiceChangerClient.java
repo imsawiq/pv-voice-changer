@@ -5,6 +5,8 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
+import org.sawiq.client.compat.ClientScreens;
+import org.sawiq.client.compat.ServerChannel;
 import org.sawiq.client.ui.UpdateAvailableScreen;
 import org.sawiq.client.update.ModrinthVersionChecker;
 import su.plo.voice.client.ModVoiceClient;
@@ -17,6 +19,11 @@ public class PvVoiceChangerClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        // Before anything can connect: Minecraft fixes the set of payload
+        // types during startup, and one added later would never be delivered.
+        ServerChannel.initialize(payload ->
+                VoiceChangerAddon.INSTANCE.serverSession().receive(payload));
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (initialized || ModVoiceClient.INSTANCE == null) {
                 return;
@@ -32,9 +39,9 @@ public class PvVoiceChangerClient implements ClientModInitializer {
             }
             VoiceChangerAddon.INSTANCE.tick();
 
-            if (this.pendingUpdate != null && !this.updateScreenShown && client.gui.screen() instanceof TitleScreen titleScreen) {
+            if (this.pendingUpdate != null && !this.updateScreenShown && ClientScreens.current() instanceof TitleScreen titleScreen) {
                 this.updateScreenShown = true;
-                client.setScreenAndShow(new UpdateAvailableScreen(titleScreen, this.pendingUpdate.version(), this.pendingUpdate.url(), this.pendingUpdate.curseForgeUrl()));
+                ClientScreens.open(new UpdateAvailableScreen(titleScreen, this.pendingUpdate.version(), this.pendingUpdate.url(), this.pendingUpdate.curseForgeUrl()));
                 this.pendingUpdate = null;
             }
         });

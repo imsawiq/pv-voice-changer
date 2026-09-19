@@ -2,16 +2,28 @@ package org.sawiq.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.GameShuttingDownEvent;
 import org.sawiq.PvVoiceChanger;
+import org.sawiq.client.compat.ServerChannel;
 import org.sawiq.client.ui.UpdateAvailableScreen;
 import org.sawiq.client.update.ModrinthVersionChecker;
 import su.plo.voice.client.ModVoiceClient;
 
-@EventBusSubscriber(modid = PvVoiceChanger.MOD_ID)
+/**
+ * The client entrypoint.
+ *
+ * <p>Its own {@code @Mod} class rather than a branch inside the common one, so
+ * that nothing here — nor anything it loads — is ever touched on a dedicated
+ * server. That is the mechanism NeoForge provides for splitting a mod by
+ * physical side.</p>
+ */
+@Mod(value = PvVoiceChanger.MOD_ID, dist = Dist.CLIENT)
+@EventBusSubscriber(modid = PvVoiceChanger.MOD_ID, value = Dist.CLIENT)
 public final class PvVoiceChangerClient {
     private static boolean initialized;
     private static final ModrinthVersionChecker VERSION_CHECKER = new ModrinthVersionChecker();
@@ -19,7 +31,11 @@ public final class PvVoiceChangerClient {
     private static boolean updateScreenShown;
     private static boolean versionCheckStarted;
 
-    private PvVoiceChangerClient() {
+    public PvVoiceChangerClient() {
+        // Before anything can connect: NeoForge collects payload handlers once
+        // loading is done, and one registered after that is never delivered.
+        ServerChannel.initialize(payload ->
+                VoiceChangerAddon.INSTANCE.serverSession().receive(payload));
     }
 
     @SubscribeEvent
