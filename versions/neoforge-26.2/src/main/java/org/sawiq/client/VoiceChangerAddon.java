@@ -467,7 +467,14 @@ public final class VoiceChangerAddon {
         this.presetEntry.clearChangeListeners();
         this.strengthEntry.clearChangeListeners();
 
-        this.enabledEntry.addChangeListener(value -> persistIfInteractive());
+        // Recomputed here rather than only in setEnabled(): Plasmo Voice's own
+        // activation tab binds its toggle straight to this entry, so flipping
+        // the switch there never reaches setEnabled() and the audio thread
+        // would keep reading the snapshot taken before the switch moved.
+        this.enabledEntry.addChangeListener(value -> {
+            refreshActiveVoice();
+            persistIfInteractive();
+        });
         this.selfListenEntry.addChangeListener(value -> {
             if (!this.suppressUiEvents && !value) {
                 this.selfListenMonitor.stop();
@@ -484,7 +491,12 @@ public final class VoiceChangerAddon {
             }
             applyBuiltInPreset(value);
         });
-        this.strengthEntry.addChangeListener(value -> persistIfInteractive());
+        // Strength is part of that same snapshot, and the studio's slider writes
+        // the entry directly for the same reason.
+        this.strengthEntry.addChangeListener(value -> {
+            refreshActiveVoice();
+            persistIfInteractive();
+        });
     }
 
     private void loadAutosaveOrDefault() {

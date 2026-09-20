@@ -6,7 +6,7 @@ issueTrackerURL = "https://github.com/imsawiq/pv-voice-changer/issues"
 [[mods]]
 modId = "${mod_id}"
 version = "${version}"
-displayName = "Plasmo Voice Changer"
+displayName = "Plasmo Voice Voice Changer"
 description = "Voice changer for Plasmo Voice: presets, custom tuning, saved profiles, self listen, a native settings UI, an API for other mods, and server-side policy with commands and shared voices."
 authors = "sawiq_"
 displayURL = "https://github.com/imsawiq/pv-voice-changer"

@@ -61,6 +61,14 @@ it a chipmunk.
 - **Output limiter** - the heavy voices no longer crackle.
 
 ### Changed
+- **The mod is called Plasmo Voice Voice Changer** in the mod list, matching
+  the Simple Voice Chat build's name.
+- **The on/off switch reads off while a server refuses**, in both Plasmo
+  Voice's activation settings and the studio, with a line saying whether the
+  server has it switched off, a moderator muted you, or you lack permission.
+  Your own setting is kept underneath and comes back by itself. Nothing else
+  is greyed: choosing a voice only changes what happens on your machine, so
+  you can still have one ready for when you are allowed again.
 - **All presets rebuilt** on the new engine, including Man, Woman, Titan, Kid,
   Demon and Radio.
 - **Less reverb and hiss in the presets.** The voice goes out through a speech

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pv-voice-changer",
   "version": "${version}",
-  "name": "Plasmo Voice Changer",
+  "name": "Plasmo Voice Voice Changer",
   "description": "Voice changer for Plasmo Voice: presets, custom tuning, saved profiles, self listen, a native settings UI, an API for other mods, and server-side policy with commands and shared voices.",
   "authors": [
     "sawiq_"
