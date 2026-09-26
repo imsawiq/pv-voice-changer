@@ -10,7 +10,10 @@ displayName = "Plasmo Voice Voice Changer"
 description = "Voice changer for Plasmo Voice: presets, custom tuning, saved profiles, self listen, a native settings UI, an API for other mods, and server-side policy with commands and shared voices."
 authors = "sawiq_"
 displayURL = "https://github.com/imsawiq/pv-voice-changer"
-logoFile = "assets/pv-voice-changer/icon.png"
+# NeoForge 26.3 deprecated logoFile and shows a warning screen on startup for
+# it. iconFile is the square-icon replacement; the icon here is square. Older
+# NeoForge does not know this key, which is why only this fork uses it.
+iconFile = "assets/pv-voice-changer/icon.png"
 
 [[mixins]]
 config = "pv-voice-changer.mixins.json"
