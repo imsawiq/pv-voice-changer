@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.1
+
+### Fixed
+- **No more warning screen on Minecraft 26.3.** NeoForge deprecated the
+  `logoFile` key there and puts a warning in front of the player before the
+  game starts for any mod still using it. The 26.3 build now uses `iconFile`,
+  the replacement for square icons. The key exists only in 26.3, so the 1.21,
+  26.1 and 26.2 builds keep `logoFile` - they would not understand the new one.
+
+
 ## 1.7
 
 Rewrite of the audio engine. The old chain shifted pitch with a two-tap delay
