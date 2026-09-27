@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.7.2
+
+### Fixed
+- **NeoForge builds no longer crash when you join a world on Minecraft 1.21.7
+  through 1.21.11.** NeoForge moved the client-side packet send into a new
+  class in 1.21.7 and removed the old one, and this build covers 1.21 through
+  1.21.11 - both sides of that move. It was compiled against the older
+  Minecraft, so on 1.21.7 and later the class it reached for was not there and
+  the game came down as soon as the mod greeted the server. The right class is
+  now looked up when the mod loads, so one build works across the whole range.
+  Only NeoForge was affected; Fabric never had this.
+
+
 ## 1.7.1
 
 ### Fixed

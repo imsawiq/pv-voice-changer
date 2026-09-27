@@ -1,9 +1,11 @@
 package org.sawiq.client.compat;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.registration.NetworkRegistry;
 import org.sawiq.PvVoiceChanger;
 import org.sawiq.protocol.VoiceChangerChannel;
@@ -67,12 +69,57 @@ public final class ServerChannel {
         }
 
         try {
-            PacketDistributor.sendToServer(new ByteArrayPayload(codec.getType(), payload));
+            sendToServer(new ByteArrayPayload(codec.getType(), payload));
             return true;
         } catch (RuntimeException exception) {
             // The connection can drop between the check and the send.
             PvVoiceChanger.LOGGER.debug("Could not send on the voice changer channel", exception);
             return false;
+        }
+    }
+
+    /**
+     * NeoForge moved the client-side send out of {@code PacketDistributor} and
+     * into {@code ClientPacketDistributor} in 1.21.7, removing the old entry
+     * point at the same time. This build covers 1.21 through 1.21.11, which
+     * sits on both sides of that move, so neither class can be named at
+     * compile time without breaking half the range.
+     *
+     * <p>Resolved once when the class loads. Sending is rare here - a greeting
+     * per connection and a reply to a policy change, never audio.</p>
+     */
+    private static final Method SEND_TO_SERVER = resolveSendToServer();
+
+    private static Method resolveSendToServer() {
+        String[] candidates = {
+            "net.neoforged.neoforge.client.network.ClientPacketDistributor", // 1.21.7 and later
+            "net.neoforged.neoforge.network.PacketDistributor",              // up to 1.21.6
+        };
+
+        for (String className : candidates) {
+            try {
+                Class<?> distributor = Class.forName(className);
+                return distributor.getMethod(
+                        "sendToServer", CustomPacketPayload.class, CustomPacketPayload[].class);
+            } catch (ClassNotFoundException | NoSuchMethodException ignored) {
+                // Expected: only one of the two exists on any given version.
+            }
+        }
+
+        PvVoiceChanger.LOGGER.error(
+                "No NeoForge packet sender found; the voice changer cannot talk to the server");
+        return null;
+    }
+
+    private static void sendToServer(CustomPacketPayload payload) {
+        if (SEND_TO_SERVER == null) {
+            return;
+        }
+
+        try {
+            SEND_TO_SERVER.invoke(null, payload, new CustomPacketPayload[0]);
+        } catch (IllegalAccessException | InvocationTargetException exception) {
+            throw new IllegalStateException("Could not send on the voice changer channel", exception);
         }
     }
 }
