@@ -41,10 +41,14 @@ $NeoForgeExclusions = @(
 )
 
 $Forks = @(
+    @{ Name = "fabric-1.21.9";    Loader = "fabric" }
+    @{ Name = "fabric-1.21.11";   Loader = "fabric" }
     @{ Name = "fabric-26.1";   Loader = "fabric" }
     @{ Name = "fabric-26.2";   Loader = "fabric" }
     @{ Name = "fabric-26.3";   Loader = "fabric" }
     @{ Name = "neoforge-1.21"; Loader = "neoforge" }
+    @{ Name = "neoforge-1.21.9";  Loader = "neoforge" }
+    @{ Name = "neoforge-1.21.11"; Loader = "neoforge" }
     @{ Name = "neoforge-26.1"; Loader = "neoforge" }
     @{ Name = "neoforge-26.2"; Loader = "neoforge" }
     @{ Name = "neoforge-26.3"; Loader = "neoforge" }

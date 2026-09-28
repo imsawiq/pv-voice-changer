@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.7.3
+
+### Added
+- **Builds of their own for Minecraft 1.21.9, 1.21.10 and 1.21.11.** Minecraft
+  changed how key presses reach a screen in 1.21.9 and renamed the class that
+  identifies a plugin channel in 1.21.11. The 1.21 build claimed those releases
+  but was compiled before either change, so the studio's keyboard shortcuts and
+  its link to the server could not work there. Those versions now get builds
+  compiled against them, and the 1.21 build covers 1.21 through 1.21.8 - what
+  it can actually honour.
+
+### Fixed
+- **The studio opens again on Minecraft 1.21 through 1.21.5.** Minecraft 1.21.6
+  changed what its text-drawing call returns. Nothing about the call looks
+  different in the source, but it is a different method as far as the game is
+  concerned, so a build compiled against the newer half came down the instant it
+  tried to draw a label - which is to say the moment you clicked the voice
+  changer button. The call is now resolved when the mod loads, so it works on
+  either side of that change.
+
+
 ## 1.7.2
 
 ### Fixed

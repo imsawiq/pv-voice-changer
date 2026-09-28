@@ -49,7 +49,7 @@ public final class StudioGraphics {
      * hand back the end x, and now returns nothing. The call looks identical
      * in source, but the return type is part of the signature the JVM matches
      * on, so a build compiled against either half of 1.21 fails on the other
-     * with a NoSuchMethodError. This build covers 1.21 through 1.21.11, so the
+     * with a NoSuchMethodError. This build covers 1.21 through 1.21.8, so the
      * method is looked up by name and argument types, which finds it either
      * way.
      *

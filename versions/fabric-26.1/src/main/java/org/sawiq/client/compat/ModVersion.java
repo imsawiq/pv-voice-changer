@@ -7,7 +7,7 @@ import net.fabricmc.loader.api.FabricLoader;
  *
  * <p>This is the Fabric variant; the NeoForge builds ship a copy backed by
  * {@code ModList}. Keeping the lookup here is what lets the update checker and
- * the update screen stay identical across all six builds.</p>
+ * the update screen stay identical across every build.</p>
  */
 public final class ModVersion {
     private static final String MOD_ID = "pv-voice-changer";

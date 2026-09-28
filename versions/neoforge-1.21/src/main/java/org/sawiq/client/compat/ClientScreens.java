@@ -9,10 +9,9 @@ import net.minecraft.network.chat.Component;
  * versions, in one place.
  *
  * <p>Every supported version ships its own copy of this class and of
- * {@code ui.compat}. Everything else in the mod is identical across all six
- * builds, which is what lets {@code scripts/sync-versions.ps1} copy the
- * shared sources verbatim instead of leaving six drifting forks to maintain by
- * hand.</p>
+ * {@code ui.compat}. Everything else in the mod is identical across every
+ * build, which is what lets {@code scripts/sync-versions.ps1} copy the
+ * shared sources verbatim instead of leaving the forks to drift apart.</p>
  *
  * <p>This is the Minecraft 1.21 variant.</p>
  */

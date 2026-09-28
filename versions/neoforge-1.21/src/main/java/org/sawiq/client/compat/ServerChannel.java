@@ -81,7 +81,7 @@ public final class ServerChannel {
     /**
      * NeoForge moved the client-side send out of {@code PacketDistributor} and
      * into {@code ClientPacketDistributor} in 1.21.7, removing the old entry
-     * point at the same time. This build covers 1.21 through 1.21.11, which
+     * point at the same time. This build covers 1.21 through 1.21.8, which
      * sits on both sides of that move, so neither class can be named at
      * compile time without breaking half the range.
      *

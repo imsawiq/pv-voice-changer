@@ -10,11 +10,15 @@ Fabric and NeoForge mod for **Plasmo Voice** that adds a full voice changer with
 
 ### Repository layout
 
-- the root project - Fabric build for Minecraft 1.21 - 1.21.11
+- the root project - Fabric build for Minecraft 1.21 - 1.21.8
+- `versions/fabric-1.21.9` - Fabric build for Minecraft 1.21.9 - 1.21.10
+- `versions/fabric-1.21.11` - Fabric build for Minecraft 1.21.11
 - `versions/fabric-26.1` - Fabric build for Minecraft 26.1
 - `versions/fabric-26.2` - Fabric build for Minecraft 26.2
 - `versions/fabric-26.3` - Fabric build for Minecraft 26.3
-- `versions/neoforge-1.21` - NeoForge build for Minecraft 1.21 - 1.21.11
+- `versions/neoforge-1.21` - NeoForge build for Minecraft 1.21 - 1.21.8
+- `versions/neoforge-1.21.9` - NeoForge build for Minecraft 1.21.9 - 1.21.10
+- `versions/neoforge-1.21.11` - NeoForge build for Minecraft 1.21.11
 - `versions/neoforge-26.1` - NeoForge build for Minecraft 26.1
 - `versions/neoforge-26.2` - NeoForge build for Minecraft 26.2
 - `versions/neoforge-26.3` - NeoForge build for Minecraft 26.3
@@ -41,7 +45,9 @@ Fabric and NeoForge mod for **Plasmo Voice** that adds a full voice changer with
 
 | Minecraft | Fabric | NeoForge |
 |---|:---:|:---:|
-| 1.21 - 1.21.11 | yes | yes |
+| 1.21 - 1.21.8 | yes | yes |
+| 1.21.9 - 1.21.10 | yes | yes |
+| 1.21.11 | yes | yes |
 | 26.1 - 26.1.2 | yes | yes |
 | 26.2 | yes | yes |
 | 26.3 | yes | yes |
@@ -104,14 +110,17 @@ The full reference, including the API for other mods, is in [docs/API.md](docs/A
 
 ### Структура репозитория
 
-- корневой проект - Fabric-сборка для Minecraft 1.21 - 1.21.11
+- корневой проект - Fabric-сборка для Minecraft 1.21 - 1.21.8
+- `versions/fabric-1.21.9` - Fabric-сборка для Minecraft 1.21.9 - 1.21.10
+- `versions/fabric-1.21.11` - Fabric-сборка для Minecraft 1.21.11
 - `versions/fabric-26.1` - Fabric-сборка для Minecraft 26.1
 - `versions/fabric-26.2` - Fabric-сборка для Minecraft 26.2
 - `versions/fabric-26.3` - Fabric-сборка для Minecraft 26.3
-- `versions/neoforge-1.21` - NeoForge-сборка для Minecraft 1.21 - 1.21.11
+- `versions/neoforge-1.21` - NeoForge-сборка для Minecraft 1.21 - 1.21.8
+- `versions/neoforge-1.21.9` - NeoForge-сборка для Minecraft 1.21.9 - 1.21.10
+- `versions/neoforge-1.21.11` - NeoForge-сборка для Minecraft 1.21.11
 - `versions/neoforge-26.1` - NeoForge-сборка для Minecraft 26.1
 - `versions/neoforge-26.2` - NeoForge-сборка для Minecraft 26.2
-- `versions/neoforge-26.3` - NeoForge-сборка для Minecraft 26.3
 - `versions/neoforge-26.3` - NeoForge-сборка для Minecraft 26.3
 - `build-version.bat fabric-26.3` - собрать одну версию (также принимает `fabric-1.21`, `fabric-26.1`, `fabric-26.2`, `neoforge-1.21`, `neoforge-26.1`, `neoforge-26.2`, `neoforge-26.3`)
 - `build-all.bat` - собрать все Fabric- и NeoForge-версии в `dist/`
@@ -136,7 +145,9 @@ The full reference, including the API for other mods, is in [docs/API.md](docs/A
 
 | Minecraft | Fabric | NeoForge |
 |---|:---:|:---:|
-| 1.21 - 1.21.11 | да | да |
+| 1.21 - 1.21.8 | да | да |
+| 1.21.9 - 1.21.10 | да | да |
+| 1.21.11 | да | да |
 | 26.1 - 26.1.2 | да | да |
 | 26.2 | да | да |
 | 26.3 | да | да |
