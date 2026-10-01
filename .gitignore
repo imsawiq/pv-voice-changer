@@ -14,3 +14,8 @@
 # Eclipse/VS Code Java output
 /bin/
 /versions/*/bin/
+
+# Runtime check: downloaded mods, the generated world, game directories
+/tools/runtime-check/.work/
+/tools/runtime-check/*/build/
+/tools/runtime-check/*/.gradle/

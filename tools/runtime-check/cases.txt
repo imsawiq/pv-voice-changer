@@ -1,0 +1,28 @@
+# <loader> <Minecraft version> <jar under dist/, newest match wins>
+#
+# Each jar is checked at both ends of the Minecraft range it declares, plus
+# around 1.21.6, where drawString changed its return type underneath the
+# 1.21 build, and at 1.21.3 and 1.21.5, where Plasmo Voice stops at 2.1.8.
+
+fabric   1.21     dist/pv-voice-changer-*-fabric-1.21.jar
+fabric   1.21.5   dist/pv-voice-changer-*-fabric-1.21.jar
+fabric   1.21.6   dist/pv-voice-changer-*-fabric-1.21.jar
+fabric   1.21.8   dist/pv-voice-changer-*-fabric-1.21.jar
+fabric   1.21.9   dist/pv-voice-changer-*-fabric-1.21.9.jar
+fabric   1.21.10  dist/pv-voice-changer-*-fabric-1.21.9.jar
+fabric   1.21.11  dist/pv-voice-changer-*-fabric-1.21.11.jar
+fabric   26.1     dist/pv-voice-changer-*-fabric-26.1.jar
+fabric   26.1.2   dist/pv-voice-changer-*-fabric-26.1.jar
+fabric   26.2     dist/pv-voice-changer-*-fabric-26.2.jar
+fabric   26.3     dist/pv-voice-changer-*-fabric-26.3.jar
+
+neoforge 1.21.1   dist/pv-voice-changer-neoforge-*-neoforge-1.21.jar
+neoforge 1.21.3   dist/pv-voice-changer-neoforge-*-neoforge-1.21.jar
+neoforge 1.21.5   dist/pv-voice-changer-neoforge-*-neoforge-1.21.jar
+neoforge 1.21.8   dist/pv-voice-changer-neoforge-*-neoforge-1.21.jar
+neoforge 1.21.9   dist/pv-voice-changer-neoforge-*-neoforge-1.21.9.jar
+neoforge 1.21.10  dist/pv-voice-changer-neoforge-*-neoforge-1.21.9.jar
+neoforge 1.21.11  dist/pv-voice-changer-neoforge-*-neoforge-1.21.11.jar
+neoforge 26.1.2   dist/pv-voice-changer-neoforge-*-neoforge-26.1.jar
+neoforge 26.2     dist/pv-voice-changer-neoforge-*-neoforge-26.2.jar
+neoforge 26.3     dist/pv-voice-changer-neoforge-*-neoforge-26.3.jar

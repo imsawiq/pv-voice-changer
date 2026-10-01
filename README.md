@@ -24,6 +24,7 @@ Fabric and NeoForge mod for **Plasmo Voice** that adds a full voice changer with
 - `versions/neoforge-26.3` - NeoForge build for Minecraft 26.3
 - `build-version.bat fabric-26.3` - build one version (also accepts `fabric-1.21`, `fabric-26.1`, `fabric-26.2`, `neoforge-1.21`, `neoforge-26.1`, `neoforge-26.2`, `neoforge-26.3`)
 - `build-all.bat` - build all Fabric and NeoForge versions into `dist/`
+- `tools/runtime-check/check.py` - launch real game clients with the jars in `dist/` and walk through the studio on every supported version; see its README
 - `scripts/sync-versions.ps1` - copy the shared sources from the root project into every fork. The root is the source of truth; only `client/compat`, `client/ui/compat` and the NeoForge entry points differ per version
 
 
@@ -124,6 +125,7 @@ The full reference, including the API for other mods, is in [docs/API.md](docs/A
 - `versions/neoforge-26.3` - NeoForge-сборка для Minecraft 26.3
 - `build-version.bat fabric-26.3` - собрать одну версию (также принимает `fabric-1.21`, `fabric-26.1`, `fabric-26.2`, `neoforge-1.21`, `neoforge-26.1`, `neoforge-26.2`, `neoforge-26.3`)
 - `build-all.bat` - собрать все Fabric- и NeoForge-версии в `dist/`
+- `tools/runtime-check/check.py` - запустить настоящие клиенты с jar из `dist/` и пройти по студии на каждой поддерживаемой версии; подробности в его README
 - `scripts/sync-versions.ps1` - разнести общие исходники из корневого проекта по всем форкам. Корень — источник правды; по версиям различаются только `client/compat`, `client/ui/compat` и точки входа NeoForge
 
 
