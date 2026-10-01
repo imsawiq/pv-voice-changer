@@ -99,7 +99,11 @@ try {
 
     $DistDir = Join-Path $Root "dist"
     New-Item -ItemType Directory -Force $DistDir | Out-Null
-    Get-ChildItem $DistDir -Filter "*-$OutputVersion*.jar" -File | Remove-Item -Force
+    # Exact suffixes: a "*-fabric-1.21*" wildcard would also take the
+    # fabric-1.21.9 and fabric-1.21.11 jars with it.
+    Get-ChildItem $DistDir -File |
+        Where-Object { $_.Name -like "*-$OutputVersion.jar" -or $_.Name -like "*-$OutputVersion-sources.jar" } |
+        Remove-Item -Force
 
     $JarFiles = Get-ChildItem (Join-Path $ProjectDir "build\libs") -Filter "*.jar" -File
     foreach ($JarFile in $JarFiles) {

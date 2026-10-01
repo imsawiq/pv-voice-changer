@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.7.4
+
+### Fixed
+- **The studio no longer crashes on Fabric 1.21 through 1.21.8.** The fix in
+  1.7.3 looked up the text-drawing call by its name, and that name only exists
+  in the development environment: a Fabric game installed by a launcher calls
+  it something else. It worked in every test and crashed for everyone who
+  clicked the voice changer button. Text is now drawn through a call that has
+  the same shape on every 1.21 release, so nothing has to be looked up.
+- **The NeoForge build loads on Minecraft 1.21.2, 1.21.3 and 1.21.5.** It asked
+  for Plasmo Voice 2.1.13 or newer, and Plasmo Voice stops at 2.1.8 on those
+  releases, so NeoForge refused to start the mod there. It now asks for 2.1.8,
+  the same as the Fabric build, and is compiled against 2.1.8 so it cannot
+  lean on anything newer by accident.
+- **The studio title is sharp again on 1.21 through 1.21.5.** Those releases
+  blur the menu background as part of drawing the buttons, and the title was
+  drawn before that, so it came out blurred.
+- **The studio fits the default game window.** At 854x480 with automatic GUI
+  scale, the right-hand buttons ran under the scrollbar and a pixel off the
+  screen. The columns now narrow to fit.
+- **The on/off switch in an open studio follows the server.** If a server
+  turned the voice changer off while the studio was open, the switch kept
+  reading "On" until you reopened it.
+- **The diagnostics line stops claiming audio is arriving when it is not.** It
+  kept showing the last busy second after the microphone went quiet, which with
+  push-to-talk is every time the key is let go.
+
 ## 1.7.3
 
 ### Added

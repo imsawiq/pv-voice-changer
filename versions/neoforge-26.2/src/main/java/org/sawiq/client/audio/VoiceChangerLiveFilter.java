@@ -24,7 +24,7 @@ public final class VoiceChangerLiveFilter implements AudioFilter {
     private volatile int lastBlockFrames;
     private volatile int blocksPerSecond;
     private int blocksThisSecond;
-    private long secondStartedAt = System.currentTimeMillis();
+    private volatile long secondStartedAt = System.currentTimeMillis();
 
     public VoiceChangerLiveFilter(VoiceChangerAddon addon, SelfListenBus selfListenBus) {
         this.addon = addon;
@@ -95,7 +95,16 @@ public final class VoiceChangerLiveFilter implements AudioFilter {
                 this.processor.appliedPitchRatio(),
                 this.lastBlockFrames,
                 this.lastChannelCount,
-                this.blocksPerSecond);
+                recentBlocksPerSecond());
+    }
+
+    /**
+     * The count only moves when a block arrives, so once blocks stop coming it
+     * would go on showing the last busy second. Push-to-talk stops them every
+     * time the key is let go, and the studio then claimed audio was flowing.
+     */
+    private int recentBlocksPerSecond() {
+        return System.currentTimeMillis() - this.secondStartedAt > 2_000L ? 0 : this.blocksPerSecond;
     }
 
     /** Counts blocks so the studio can show whether audio is arriving at all. */
