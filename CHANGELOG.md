@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.7.5
+
+### Added
+- **A key to open the studio.** Plasmo Voice's Hotkeys tab and the voice
+  changer section of its Activation tab now have a key for opening the studio,
+  next to the toggle. It is unbound by default; until now the studio could only
+  be reached through Plasmo Voice's settings.
+
 ## 1.7.4
 
 ### Fixed

@@ -52,7 +52,9 @@ import su.plo.voice.client.config.hotkey.HotkeyConfigEntry;
 )
 public final class VoiceChangerAddon {
     private static final String TOGGLE_HOTKEY_ID = "pvvoicechanger.toggle";
-    private static final String TOGGLE_HOTKEY_CATEGORY = "category.pvvoicechanger";
+    private static final String OPEN_STUDIO_HOTKEY_ID = "pvvoicechanger.open_studio";
+    /** Plasmo Voice shows these in its Hotkeys tab under this heading. */
+    private static final String HOTKEY_CATEGORY = "category.pvvoicechanger";
 
     public static final VoiceChangerAddon INSTANCE = new VoiceChangerAddon();
 
@@ -95,6 +97,7 @@ public final class VoiceChangerAddon {
     private boolean autosaveFailureLogged;
     private AudioDevice attachedDevice;
     private HotkeyConfigEntry toggleHotkeyEntry;
+    private HotkeyConfigEntry openStudioHotkeyEntry;
     private volatile double inputLevel;
 
     private VoiceChangerAddon() {
@@ -276,6 +279,10 @@ public final class VoiceChangerAddon {
         return this.toggleHotkeyEntry;
     }
 
+    public HotkeyConfigEntry getOpenStudioHotkeyEntry() {
+        return this.openStudioHotkeyEntry;
+    }
+
     public VoiceChangerPreset getSelectedPreset() {
         return this.presetEntry.value();
     }
@@ -440,25 +447,37 @@ public final class VoiceChangerAddon {
 
     // --- Internals ---------------------------------------------------------
 
+    /**
+     * Both keys live in Plasmo Voice's own hotkey list rather than Minecraft's
+     * key binds, next to its push-to-talk: that is where a Plasmo Voice player
+     * looks for anything voice-related. Opening the studio is unbound by
+     * default, as it is in the Simple Voice Chat build.
+     */
     private void ensureHotkeyRegistered() {
         ConfigHotkeys hotkeys = (ConfigHotkeys) this.voiceClient.getHotkeys();
-        if (hotkeys.getConfigHotkey(TOGGLE_HOTKEY_ID).isEmpty()) {
-            hotkeys.register(
-                    TOGGLE_HOTKEY_ID,
-                    List.of(new Hotkey.Key(Hotkey.Type.KEYSYM, InputConstants.KEY_J)),
-                    TOGGLE_HOTKEY_CATEGORY,
-                    true
-            );
+        this.toggleHotkeyEntry = registerHotkey(hotkeys, TOGGLE_HOTKEY_ID,
+                List.of(new Hotkey.Key(Hotkey.Type.KEYSYM, InputConstants.KEY_J)),
+                this::toggleEnabled);
+        this.openStudioHotkeyEntry = registerHotkey(hotkeys, OPEN_STUDIO_HOTKEY_ID, List.of(),
+                () -> ClientScreens.open(new VoiceChangerStudioScreen(null, this)));
+    }
+
+    /** Registers the key once, keeping whatever the player rebound it to, and runs the action in game only. */
+    private static HotkeyConfigEntry registerHotkey(
+            ConfigHotkeys hotkeys, String id, List<Hotkey.Key> defaultKeys, Runnable action) {
+        if (hotkeys.getConfigHotkey(id).isEmpty()) {
+            hotkeys.register(id, defaultKeys, HOTKEY_CATEGORY, true);
         }
 
-        this.toggleHotkeyEntry = hotkeys.getConfigHotkey(TOGGLE_HOTKEY_ID).orElseThrow();
-        Hotkey hotkey = this.toggleHotkeyEntry.value();
+        HotkeyConfigEntry entry = hotkeys.getConfigHotkey(id).orElseThrow();
+        Hotkey hotkey = entry.value();
         hotkey.clearPressListener();
-        hotkey.addPressListener(action -> {
-            if (action == Hotkey.Action.DOWN && ClientScreens.current() == null) {
-                toggleEnabled();
+        hotkey.addPressListener(pressed -> {
+            if (pressed == Hotkey.Action.DOWN && ClientScreens.current() == null) {
+                action.run();
             }
         });
+        return entry;
     }
 
     private void bindListeners() {

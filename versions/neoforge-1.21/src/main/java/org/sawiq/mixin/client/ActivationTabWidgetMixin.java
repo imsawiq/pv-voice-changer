@@ -65,6 +65,11 @@ public abstract class ActivationTabWidgetMixin extends AbstractHotKeysTabWidget 
                 "pvvoicechanger.tab.toggle_bind.desc",
                 addon.getToggleHotkeyEntry()
         ));
+        this.addEntry(this.createHotKey(
+                "pvvoicechanger.tab.open_studio_bind_label",
+                "pvvoicechanger.tab.open_studio_bind.desc",
+                addon.getOpenStudioHotkeyEntry()
+        ));
 
         // The studio and the preset folder stay usable while the server says
         // no: the studio is where the reason is spelled out in full, and

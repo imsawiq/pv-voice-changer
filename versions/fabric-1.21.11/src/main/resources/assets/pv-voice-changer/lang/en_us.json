@@ -106,8 +106,8 @@
   "pvvoicechanger.param.autotuneScale": "Scale",
   "pvvoicechanger.param.autotuneScale.desc": "Which notes the voice is allowed to snap to.",
   "category.pvvoicechanger": "Plasmo Voice Voice Changer",
-  "pvvoicechanger.toggle": "Toggle voice changer",
-  "key.pvvoicechanger.toggle": "Toggle voice changer",
+  "pvvoicechanger.toggle": "Toggle Voice Changer",
+  "key.pvvoicechanger.toggle": "Toggle Voice Changer",
   "pvvoicechanger.saved.current": "Current / Autosave",
   "pvvoicechanger.actionbar.enabled": "Voice changer enabled",
   "pvvoicechanger.actionbar.disabled": "Voice changer disabled",
@@ -140,5 +140,9 @@
   "pvvoicechanger.server.voices_restricted": "This server now allows only %s. Pick one in the studio.",
   "pvvoicechanger.server.voices.all": "any voice",
   "pvvoicechanger.server.voices.presets": "ready-made voices",
-  "pvvoicechanger.server.voices.server_only": "this server's own voices"
+  "pvvoicechanger.server.voices.server_only": "this server's own voices",
+  "pvvoicechanger.open_studio": "Open Voice Changer Studio",
+  "key.pvvoicechanger.open_studio": "Open Voice Changer Studio",
+  "pvvoicechanger.tab.open_studio_bind_label": "Open Studio",
+  "pvvoicechanger.tab.open_studio_bind.desc": "Key that opens the voice changer studio. Unbound by default."
 }

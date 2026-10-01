@@ -140,5 +140,9 @@
   "pvvoicechanger.server.voices_restricted": "Сервер тепер дозволяє лише %s. Обери голос у студії.",
   "pvvoicechanger.server.voices.all": "будь-який голос",
   "pvvoicechanger.server.voices.presets": "готові голоси",
-  "pvvoicechanger.server.voices.server_only": "голоси цього сервера"
+  "pvvoicechanger.server.voices.server_only": "голоси цього сервера",
+  "pvvoicechanger.open_studio": "Відкрити студію войсченджера",
+  "key.pvvoicechanger.open_studio": "Відкрити студію войсченджера",
+  "pvvoicechanger.tab.open_studio_bind_label": "Відкрити студію",
+  "pvvoicechanger.tab.open_studio_bind.desc": "Клавіша, що відкриває студію войсченджера. Типово не призначена."
 }
