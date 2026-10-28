@@ -4,8 +4,16 @@ import com.mojang.blaze3d.platform.InputConstants;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.UnaryOperator;
 import net.minecraft.network.chat.Component;
 import org.sawiq.PvVoiceChanger;
+import org.sawiq.client.ai.AiVoiceController;
+import org.sawiq.client.ai.AiVoiceSettings;
+import org.sawiq.client.ai.AiVoiceSettingsStore;
+import org.sawiq.client.ai.audio.AudioFrames;
+import org.sawiq.client.ai.runtime.AiVoiceRuntime;
+import org.sawiq.client.ai.runtime.AiVoiceStream;
+import org.sawiq.client.audio.AiCaptureBridge;
 import org.sawiq.client.audio.SelfListenBus;
 import org.sawiq.client.audio.SelfListenMonitor;
 import org.sawiq.client.audio.VoiceChangerLiveFilter;
@@ -24,6 +32,10 @@ import org.sawiq.client.preset.VoiceChangerPresetStore;
 import org.sawiq.client.server.ServerVoiceSession;
 import org.sawiq.protocol.PolicyReason;
 import org.sawiq.protocol.VoiceSourceRule;
+import org.sawiq.client.ui.AiModelPickerScreen;
+import org.sawiq.client.ui.AiTextScreen;
+import org.sawiq.client.ui.AiTrainScreen;
+import org.sawiq.client.ui.AiVoiceScreen;
 import org.sawiq.client.ui.VoiceChangerStudioScreen;
 import su.plo.config.entry.BooleanConfigEntry;
 import su.plo.config.entry.EnumConfigEntry;
@@ -66,6 +78,9 @@ public final class VoiceChangerAddon {
 
     private final VoiceChangerApiSupport api = new VoiceChangerApiSupport();
     private final ServerVoiceSession serverSession = new ServerVoiceSession(this);
+    private final AiVoiceRuntime aiRuntime = new AiVoiceRuntime();
+    private final AiCaptureBridge aiCaptureBridge = new AiCaptureBridge(this.aiRuntime,
+            mono -> this.aiVoice != null ? this.aiVoice.previewFrame(mono) : null);
     private final SelfListenBus selfListenBus = new SelfListenBus();
     private final VoiceChangerLiveFilter liveFilter = new VoiceChangerLiveFilter(this, this.selfListenBus);
     private final SelfListenMonitor selfListenMonitor = new SelfListenMonitor(
@@ -73,11 +88,25 @@ public final class VoiceChangerAddon {
             this::openMonitorDevice,
             this::getActiveVoice,
             this::reportInputLevel,
-            failure -> setSelfListenEnabled(false)
+            failure -> setSelfListenEnabled(false),
+            new SelfListenMonitor.AiPreview() {
+                @Override
+                public boolean isActive() {
+                    AiVoiceController ai = VoiceChangerAddon.this.aiVoice;
+                    return ai != null && ai.isPreviewing();
+                }
+
+                @Override
+                public short[] convert(short[] mono) {
+                    return VoiceChangerAddon.this.aiVoice.previewFrame(mono);
+                }
+            }
     );
 
     private ModVoiceClient voiceClient;
     private VoiceChangerPresetStore presetStore;
+    private AiVoiceController aiVoice;
+    private AiVoiceStream.Activity lastAiActivity = AiVoiceStream.Activity.IDLE;
     private List<String> savedPresetNames = List.of();
     private boolean initialized;
     private boolean suppressUiEvents;
@@ -86,6 +115,7 @@ public final class VoiceChangerAddon {
     private volatile boolean allowedByServer = true;
     private volatile PolicyReason serverDenialReason = PolicyReason.ALLOWED;
     private volatile VoiceSourceRule voiceRule = VoiceSourceRule.ALL;
+    private volatile boolean aiAllowedByServer = true;
     private volatile String serverDenialMessage = "";
     private String selectedSavedPresetName;
     /**
@@ -111,6 +141,8 @@ public final class VoiceChangerAddon {
 
         this.voiceClient = voiceClient;
         this.presetStore = new VoiceChangerPresetStore(getPresetDirectory());
+        this.aiVoice = new AiVoiceController(new AiVoiceSettingsStore(getAiDirectory()), this.aiRuntime);
+        this.aiVoice.load();
         ensureHotkeyRegistered();
         reloadSavedPresetNames();
         bindListeners();
@@ -118,6 +150,7 @@ public final class VoiceChangerAddon {
         ensureFilterAttached();
         this.initialized = true;
         refreshActiveVoice();
+        this.aiVoice.refresh();
         // Published last: a mod calling in from its own thread the instant the
         // API appears must find an addon that is already fully wired up.
         VoiceChangerApiRegistry.publish(new VoiceChangerApiImpl(this));
@@ -132,6 +165,7 @@ public final class VoiceChangerAddon {
         this.api.clear();
         detachFilter();
         this.selfListenMonitor.stop();
+        this.aiVoice.shutdown();
         this.initialized = false;
         this.voiceClient = null;
         refreshActiveVoice();
@@ -147,6 +181,41 @@ public final class VoiceChangerAddon {
         if (!isStudioOpen() && this.selfListenEntry.value()) {
             setSelfListenEnabled(false);
         }
+        this.aiVoice.tick();
+        this.aiVoice.setPreviewWanted(this.selfListenEntry.value() || isVoiceModMenuOpen());
+        this.aiVoice.setStudioOpen(isAiScreenOpen());
+        reportAiVoiceEvents();
+    }
+
+    /**
+     * Tells the player, above the hotbar, what the AI voice is doing when it
+     * is not obvious: a phrase engine is silent while it converts, and a
+     * failing engine sends nothing at all.
+     */
+    private void reportAiVoiceEvents() {
+        String failure = this.aiVoice.takeFailure();
+        if (failure != null) {
+            // The engine's own words are for the log; the player only needs
+            // to know the voice hiccuped and that it is being dealt with.
+            if (!failure.equals(AiVoiceStream.FAILURE_BUSY)) {
+                PvVoiceChanger.LOGGER.info("AI voice: {}", failure);
+            }
+            ClientScreens.sendActionBarMessage(Component.translatable("pvvoicechanger.ai.actionbar.failed",
+                    Component.translatable(failure.equals(AiVoiceStream.FAILURE_BUSY)
+                            ? failure
+                            : "pvvoicechanger.ai.failure.generic")));
+        }
+
+        String trained = this.aiVoice.takeFinishedTraining();
+        if (trained != null) {
+            ClientScreens.sendChatMessage(Component.translatable("pvvoicechanger.ai.train.finished_chat", trained));
+        }
+
+        AiVoiceStream.Activity activity = this.aiVoice.activity();
+        if (activity == AiVoiceStream.Activity.CONVERTING && this.lastAiActivity != activity) {
+            ClientScreens.sendActionBarMessage(Component.translatable("pvvoicechanger.ai.actionbar.converting"));
+        }
+        this.lastAiActivity = activity;
     }
 
     /** What the current server has said about the voice changer. */
@@ -168,14 +237,34 @@ public final class VoiceChangerAddon {
         return this.activeVoice;
     }
 
-    /** Whether the voice is being changed at all, override and server policy included. */
+    /** Whether the voice is being changed at all, override, AI voice and server policy included. */
     public boolean isEffectActive() {
-        return this.activeVoice.active();
+        return this.activeVoice.active() || this.aiRuntime.isActive();
+    }
+
+    /** The capture thread's way into the AI voice. */
+    public AiCaptureBridge aiCaptureBridge() {
+        return this.aiCaptureBridge;
+    }
+
+    /**
+     * Start of a Plasmo Voice capture tick. While the AI voice speaks, the
+     * filter no longer sees the microphone, so the meter is fed from here.
+     */
+    public void onCaptureTick(short[] samples) {
+        this.aiCaptureBridge.beginTick(samples);
+        if (this.aiRuntime.isActive()) {
+            reportInputLevel(AudioFrames.peakOf(samples));
+        }
     }
 
     /** Whether the player has the effect switched on, ignoring anything on top of it. */
     public boolean isEffectEnabled() {
         return this.enabledEntry.value();
+    }
+
+    public boolean isSelfListenEnabled() {
+        return this.selfListenEntry.value();
     }
 
     /** The tuning the player chose, ignoring any override on top of it. */
@@ -185,6 +274,41 @@ public final class VoiceChangerAddon {
 
     public int getStrength() {
         return this.strengthEntry.value();
+    }
+
+    // --- AI voice -----------------------------------------------------------
+
+    /** Engines, settings and status of the AI voice, for the studio's AI tab. */
+    public AiVoiceController aiVoice() {
+        return this.aiVoice;
+    }
+
+    /** Changes the AI voice settings; the voice source switch also changes what is active. */
+    public void updateAiSettings(UnaryOperator<AiVoiceSettings> change) {
+        this.aiVoice.update(change);
+        refreshActiveVoice();
+    }
+
+    /** Whether this server lets players speak with an AI voice. */
+    public boolean isAiAllowedByServer() {
+        return this.aiAllowedByServer && this.voiceRule != VoiceSourceRule.SERVER_ONLY;
+    }
+
+    /**
+     * The AI voice runs when the voice changer is on, the player picked the AI
+     * voice as the source, and the server allows both. A server that allows
+     * only its own shared voices is taken to mean no AI voices either.
+     */
+    private boolean isAiWanted() {
+        return this.initialized
+                && this.enabledEntry.value()
+                && this.allowedByServer
+                && isAiAllowedByServer()
+                && this.aiVoice.isSelected();
+    }
+
+    public Path getAiDirectory() {
+        return this.voiceClient.getConfigFolder().toPath().resolve("pv-voice-changer-ai");
     }
 
     // --- Public API surface -------------------------------------------------
@@ -562,12 +686,13 @@ public final class VoiceChangerAddon {
      * way to make a modified one comply.</p>
      */
     public void applyServerPolicy(
-            boolean allowed, PolicyReason reason, String message, VoiceSourceRule voices) {
+            boolean allowed, PolicyReason reason, String message, VoiceSourceRule voices, boolean aiAllowed) {
         this.serverDenialReason = allowed ? PolicyReason.ALLOWED : reason;
         this.serverDenialMessage = allowed || message == null ? "" : message;
 
-        boolean ruleChanged = this.voiceRule != voices;
+        boolean ruleChanged = this.voiceRule != voices || this.aiAllowedByServer != aiAllowed;
         this.voiceRule = voices;
+        this.aiAllowedByServer = aiAllowed;
         if (ruleChanged) {
             refreshActiveVoice();
         }
@@ -593,6 +718,9 @@ public final class VoiceChangerAddon {
                 ? this.api.resolve(this.enabledEntry.value(), this.allowedByServer,
                         isSelectedVoiceAllowed(), this.playerProfile, this.strengthEntry.value())
                 : ActiveVoice.INACTIVE;
+        if (this.aiVoice != null) {
+            this.aiVoice.setWanted(isAiWanted());
+        }
     }
 
     /** A mod pushed an override or released one. */
@@ -695,8 +823,27 @@ public final class VoiceChangerAddon {
         }
     }
 
+    /**
+     * Plasmo Voice's own settings, where its microphone test plays the
+     * filtered microphone back; with the AI voice on, that has to be the AI
+     * preview. Its screens are recognised by package, which is Plasmo Voice's
+     * and the same in every environment.
+     */
+    private static boolean isVoiceModMenuOpen() {
+        Object screen = ClientScreens.current();
+        return screen != null && screen.getClass().getName().startsWith("su.plo.");
+    }
+
+    /** The AI tab and the screens it opens, which want the engine running for previews and training. */
+    private static boolean isAiScreenOpen() {
+        Object screen = ClientScreens.current();
+        return screen instanceof AiVoiceScreen || screen instanceof AiTrainScreen
+                || screen instanceof AiModelPickerScreen || screen instanceof AiTextScreen;
+    }
+
     private boolean isStudioOpen() {
-        return ClientScreens.current() instanceof VoiceChangerStudioScreen;
+        return ClientScreens.current() instanceof VoiceChangerStudioScreen
+                || ClientScreens.current() instanceof AiVoiceScreen;
     }
 
     private void showToggleStatus() {

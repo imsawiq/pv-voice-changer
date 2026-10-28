@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.sawiq.client.VoiceChangerAddon;
 import org.sawiq.client.compat.ClientScreens;
+import org.sawiq.client.ui.LinkOpener;
 import org.sawiq.client.model.VoiceChangerPreset;
 import org.sawiq.client.ui.VoiceChangerStudioScreen;
 import org.sawiq.protocol.PolicyReason;
@@ -96,7 +97,7 @@ public abstract class ActivationTabWidgetMixin extends AbstractHotKeysTabWidget 
                 button -> {
                     try {
                         addon.ensurePresetDirectory();
-                        java.awt.Desktop.getDesktop().open(addon.getPresetDirectory().toFile());
+                        LinkOpener.open(addon.getPresetDirectory().toString());
                     } catch (java.io.IOException ignored) {
                     }
                 },

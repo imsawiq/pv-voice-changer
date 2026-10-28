@@ -46,6 +46,12 @@ public final class VoiceChangerLiveFilter implements AudioFilter {
         int channels = resolveChannelCount(context);
         countBlock(samples.length / Math.max(1, channels));
 
+        if (this.addon.aiCaptureBridge().takeOutput(samples, channels)) {
+            applyOverrideOnTopOfAi(samples, channels);
+            publishForMonitoring(samples, channels);
+            return samples;
+        }
+
         ActiveVoice voice = this.addon.getActiveVoice();
         if (!voice.active()) {
             // Still measure, so the studio's level meter works while the
@@ -71,6 +77,27 @@ public final class VoiceChangerLiveFilter implements AudioFilter {
 
         publishForMonitoring(samples, channels);
         return samples;
+    }
+
+    /**
+     * A radio or a mask from another mod still applies while the AI voice
+     * speaks, on top of it: the player chose the voice, the mod chose what it
+     * sounds like through the radio. Without an override the AI voice goes
+     * out untouched, since the effect presets would only fight it.
+     */
+    private void applyOverrideOnTopOfAi(short[] samples, int channels) {
+        ActiveVoice voice = this.addon.getActiveVoice();
+        if (this.addon.api().winningOverrideOwner() == null || !voice.active()) {
+            this.wasEnabled = false;
+            return;
+        }
+
+        if (!this.wasEnabled || channels != this.lastChannelCount) {
+            this.processor.reset();
+            this.wasEnabled = true;
+            this.lastChannelCount = channels;
+        }
+        this.processor.process(samples, channels, voice.profile(), voice.strength());
     }
 
     /**

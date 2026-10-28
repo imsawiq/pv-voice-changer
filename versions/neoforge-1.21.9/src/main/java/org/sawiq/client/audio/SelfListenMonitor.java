@@ -57,6 +57,22 @@ public final class SelfListenMonitor {
     private final Supplier<ActiveVoice> activeVoice;
     private final Consumer<Double> levelReporter;
     private final Consumer<Exception> failureHandler;
+    private final AiPreview aiPreview;
+
+    /** The AI voice works in 20 ms frames at 48 kHz; other block sizes are not previewed. */
+    private static final int AI_FRAME_SAMPLES = 960;
+
+    /**
+     * The studio's preview of the AI voice: while it is active, the monitor's
+     * own microphone goes through the AI engine instead of the effects, so the
+     * player hears the AI voice without having to send anything.
+     */
+    public interface AiPreview {
+        boolean isActive();
+
+        /** @return the converted frame, or {@code null} for silence */
+        short[] convert(short[] mono);
+    }
     private final VoiceProcessor processor = new VoiceProcessor();
 
     private volatile int lastBlockFrames;
@@ -74,8 +90,10 @@ public final class SelfListenMonitor {
             Supplier<InputDevice> deviceOpener,
             Supplier<ActiveVoice> activeVoice,
             Consumer<Double> levelReporter,
-            Consumer<Exception> failureHandler
+            Consumer<Exception> failureHandler,
+            AiPreview aiPreview
     ) {
+        this.aiPreview = aiPreview;
         this.bus = bus;
         this.deviceOpener = deviceOpener;
         this.activeVoice = activeVoice;
@@ -191,6 +209,16 @@ public final class SelfListenMonitor {
                 lastAudioAt = System.currentTimeMillis();
                 this.mode = device != null ? Mode.OWN_DEVICE : Mode.SHARED_STREAM;
                 countBlock(frames, device != null ? channels : 1);
+
+                if (device != null && this.aiPreview.isActive()) {
+                    this.levelReporter.accept(peakOf(captured, frames * channels));
+                    downmix(captured, mono, frames, channels);
+                    short[] converted = frames == AI_FRAME_SAMPLES ? this.aiPreview.convert(mono) : null;
+                    if (converted != null) {
+                        writeSamples(output, converted, converted.length, playbackBytes);
+                    }
+                    continue;
+                }
 
                 if (device != null) {
                     this.levelReporter.accept(peakOf(captured, frames * channels));

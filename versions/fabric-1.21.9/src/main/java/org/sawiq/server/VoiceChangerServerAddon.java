@@ -192,18 +192,19 @@ public final class VoiceChangerServerAddon implements AddonInitializer {
      */
     private VoiceChangerCodec.Policy policyFor(McPlayer player) {
         VoiceSourceRule voices = this.config.getAllowedVoices();
+        boolean aiVoice = this.config.isAiVoiceAllowed();
 
         if (!this.config.isAllowed()) {
             return new VoiceChangerCodec.Policy(
-                    false, PolicyReason.SERVER_DISABLED, this.config.getDeniedMessage(), voices);
+                    false, PolicyReason.SERVER_DISABLED, this.config.getDeniedMessage(), voices, aiVoice);
         }
         if (this.mutes.isMuted(player.getUuid())) {
-            return new VoiceChangerCodec.Policy(false, PolicyReason.PLAYER_MUTED, "", voices);
+            return new VoiceChangerCodec.Policy(false, PolicyReason.PLAYER_MUTED, "", voices, aiVoice);
         }
         if (!player.hasPermission(PERMISSION_USE)) {
-            return new VoiceChangerCodec.Policy(false, PolicyReason.NO_PERMISSION, "", voices);
+            return new VoiceChangerCodec.Policy(false, PolicyReason.NO_PERMISSION, "", voices, aiVoice);
         }
-        return new VoiceChangerCodec.Policy(true, PolicyReason.ALLOWED, "", voices);
+        return new VoiceChangerCodec.Policy(true, PolicyReason.ALLOWED, "", voices, aiVoice);
     }
 
     // --- Channel ------------------------------------------------------------

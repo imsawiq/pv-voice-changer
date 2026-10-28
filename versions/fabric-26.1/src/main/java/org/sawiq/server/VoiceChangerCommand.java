@@ -24,7 +24,7 @@ import su.plo.slib.api.server.entity.player.McServerPlayer;
  */
 public final class VoiceChangerCommand implements McCommand {
     private static final List<String> SUBCOMMANDS =
-            List.of("status", "on", "off", "restrict", "mute", "unmute", "mutelist", "voices", "reload");
+            List.of("status", "on", "off", "restrict", "ai", "mute", "unmute", "mutelist", "voices", "reload");
 
     private final VoiceChangerServerAddon addon;
 
@@ -48,6 +48,9 @@ public final class VoiceChangerCommand implements McCommand {
         if (arguments.length == 2 && arguments[0].equalsIgnoreCase("restrict")) {
             return prefixed(ruleNames(), arguments[1]);
         }
+        if (arguments.length == 2 && arguments[0].equalsIgnoreCase("ai")) {
+            return prefixed(List.of("on", "off"), arguments[1]);
+        }
         return List.of();
     }
 
@@ -69,6 +72,7 @@ public final class VoiceChangerCommand implements McCommand {
             case "on" -> setAllowed(source, true);
             case "off" -> setAllowed(source, false);
             case "restrict" -> setRestriction(source, arguments);
+            case "ai" -> setAiVoice(source, arguments);
             case "mute" -> setMuted(source, arguments, true);
             case "unmute" -> setMuted(source, arguments, false);
             case "mutelist" -> muteList(source);
@@ -87,6 +91,7 @@ public final class VoiceChangerCommand implements McCommand {
                         .append(McTextComponent.literal(allowed ? "allowed" : "denied")
                                 .withStyle(allowed ? McTextStyle.GREEN : McTextStyle.RED)),
                 info("Voices allowed: " + this.addon.config().getAllowedVoices().configValue()),
+                info("AI voices: " + (this.addon.config().isAiVoiceAllowed() ? "allowed" : "denied")),
                 info(this.addon.mutes().size() + " player(s) muted, "
                         + this.addon.presetLibrary().presets().size() + " shared voice(s)"),
                 info("The voice is changed on the player's machine, so this is a policy an "
@@ -146,6 +151,27 @@ public final class VoiceChangerCommand implements McCommand {
         sendLines(source, withWarning(warning,
                 success("Voices allowed: " + rule.configValue() + "."),
                 info(describeRule(rule))));
+    }
+
+    private void setAiVoice(McCommandSource source, String[] arguments) {
+        if (arguments.length < 2 || !(arguments[1].equalsIgnoreCase("on") || arguments[1].equalsIgnoreCase("off"))) {
+            source.sendMessage(error("Usage: /voicechanger ai <on | off>"));
+            return;
+        }
+
+        boolean allowed = arguments[1].equalsIgnoreCase("on");
+        McTextComponent warning = null;
+        try {
+            this.addon.config().setAiVoiceAllowed(allowed);
+        } catch (IOException exception) {
+            // The change is live either way; what failed is remembering it.
+            warning = error("Applied, but could not write the config: "
+                    + describe(exception) + ". It will revert on restart.");
+        }
+
+        this.addon.broadcastPolicy();
+        sendLines(source, withWarning(warning,
+                success("AI voices " + (allowed ? "allowed" : "denied") + " on this server.")));
     }
 
     private static String describeRule(VoiceSourceRule rule) {

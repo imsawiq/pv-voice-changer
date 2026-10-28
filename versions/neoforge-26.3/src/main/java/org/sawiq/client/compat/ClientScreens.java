@@ -36,6 +36,12 @@ public final class ClientScreens {
         }
     }
 
+    /** What the system clipboard holds as text, empty when it holds none. */
+    public static String clipboardText() {
+        String text = Minecraft.getInstance().keyboardHandler.getClipboard();
+        return text == null ? "" : text;
+    }
+
     /** Writes a line above the hotbar. No-op when no player is loaded. */
     public static void sendActionBarMessage(Component message) {
         Minecraft client = Minecraft.getInstance();

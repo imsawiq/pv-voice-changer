@@ -37,6 +37,7 @@ Fabric and NeoForge mod for **Plasmo Voice** that adds a full voice changer with
 - **Clean signal path** - Noise gate, de-esser and output limiter, so room noise, sibilance and crackle stay out of the chat
 - **Preset saving** - Save your own custom setups as files and load them later
 - **Preset sharing community** - Join the Discord server to share your presets and download presets from other users
+- **AI voice** - speak with an AI voice instead of the effects: w-okada or the Voice Changer Engine on your own PC, free and live, or ElevenLabs with your own key. The engine is picked automatically. See [docs/AI_VOICE.md](docs/AI_VOICE.md)
 - **API for other mods** - a radio, a mask or a machine can apply a voice while it is in use and hand it back; mods can also add their own voices to the studio. See [docs/API.md](docs/API.md)
 - **Server side** - install it on the server too, to allow or deny the voice changer, mute individual players by command, and hand out your own voices to everyone connected
 - **Works without a server** - everything except the server policy runs on your client alone
@@ -138,6 +139,7 @@ The full reference, including the API for other mods, is in [docs/API.md](docs/A
 - **Чистый тракт** - Шумоподавление, де-эссер и лимитер, чтобы шум комнаты, шипение и треск не уходили в чат
 - **Сохранение пресетов** - Можно сохранять свои кастомные настройки в файлы и загружать их
 - **Discord-сервер с пресетами** - Можно делиться своими пресетами и скачивать пресеты других пользователей
+- **ИИ-голос** - говори ИИ-голосом вместо эффектов: w-okada или Voice Changer Engine на своём ПК, бесплатно и вживую, или ElevenLabs по своему ключу. Движок выбирается сам. См. [docs/AI_VOICE.md](docs/AI_VOICE.md)
 - **API для других модов** - рация, маска или машина могут подменить голос на время и вернуть обратно; моды могут добавлять свои голоса в студию. См. [docs/API.md](docs/API.md)
 - **Серверная часть** - мод ставится и на сервер: разрешить или запретить изменение голоса, замутить игрока командой, раздавать свои голоса всем, кто зашёл
 - **Работает и без сервера** - всё, кроме серверной политики, живёт на клиенте

@@ -1,7 +1,5 @@
 package org.sawiq.client.ui;
 
-import java.awt.Desktop;
-import java.net.URI;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -63,7 +61,7 @@ public final class UpdateAvailableScreen extends CompatScreen {
 
     private static void openUrl(String target) {
         try {
-            Desktop.getDesktop().browse(URI.create(target));
+            LinkOpener.open(target);
         } catch (Exception ignored) {
             // Nothing useful to do if the platform has no browser hook; the
             // version number is on screen and can be looked up by hand.

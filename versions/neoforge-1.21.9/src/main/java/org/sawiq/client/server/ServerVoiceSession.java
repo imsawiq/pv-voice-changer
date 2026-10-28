@@ -99,8 +99,13 @@ public final class ServerVoiceSession {
         boolean wasAllowed = this.addon.isAllowedByServer();
         VoiceSourceRule previousRule = this.addon.getVoiceRule();
 
+        boolean hadAiVoice = this.addon.isAiAllowedByServer();
         this.addon.applyServerPolicy(
-                policy.allowed(), policy.reason(), policy.message(), policy.voices());
+                policy.allowed(), policy.reason(), policy.message(), policy.voices(), policy.aiVoice());
+
+        if (hadAiVoice && !this.addon.isAiAllowedByServer() && this.addon.aiVoice().isSelected()) {
+            ClientScreens.sendChatMessage(Component.translatable("pvvoicechanger.server.ai_blocked"));
+        }
 
         // Told in chat rather than the action bar: a player whose voice changer
         // just stopped working needs to be able to scroll back and read why.
@@ -137,7 +142,7 @@ public final class ServerVoiceSession {
     private void endSession() {
         this.greeted = false;
         removeSharedPresets();
-        this.addon.applyServerPolicy(true, PolicyReason.ALLOWED, "", VoiceSourceRule.ALL);
+        this.addon.applyServerPolicy(true, PolicyReason.ALLOWED, "", VoiceSourceRule.ALL, true);
     }
 
     private void removeSharedPresets() {

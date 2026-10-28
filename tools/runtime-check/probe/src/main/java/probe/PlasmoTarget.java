@@ -23,6 +23,45 @@ final class PlasmoTarget extends Target {
                 && ((Optional<?>) Reflect.call(client, "getServerInfo")).isPresent();
     }
 
+    @Override
+    String engineKindPackage() {
+        return "client.ai.engine.";
+    }
+
+    /**
+     * Voice activation at the lowest threshold Plasmo Voice allows, on the
+     * parent activation, which is the one proximity chat uses.
+     */
+    @Override
+    Runnable sendOnRoomNoise() throws ReflectiveOperationException {
+        Object client = Reflect.staticField(VOICE_CLIENT, "INSTANCE");
+        Object activation = ((Optional<?>) Reflect.call(Reflect.call(client, "getActivationManager"),
+                "getParentActivation")).orElseThrow();
+        Object type = Reflect.field(activation, "configType");
+        Object toggle = Reflect.field(activation, "configToggle");
+        Object threshold = Reflect.call(Reflect.call(Reflect.call(client, "getConfig"), "getVoice"),
+                "getActivationThreshold");
+
+        Object previousType = Reflect.call(type, "value");
+        Object previousToggle = Reflect.call(toggle, "value");
+        Object previousThreshold = Reflect.call(threshold, "value");
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        Object voice = Enum.valueOf((Class) Reflect.type("su.plo.voice.api.client.audio.capture.ClientActivation$Type"), "VOICE");
+        Reflect.call(type, "set", voice);
+        Reflect.call(toggle, "set", false);
+        Reflect.call(threshold, "set", -60.0D);
+
+        return () -> {
+            try {
+                Reflect.call(type, "set", previousType);
+                Reflect.call(toggle, "set", previousToggle);
+                Reflect.call(threshold, "set", previousThreshold);
+            } catch (ReflectiveOperationException exception) {
+                throw new IllegalStateException(exception);
+            }
+        };
+    }
+
     /** The keys live in Plasmo Voice's hotkey list, which labels each one by its id and heading. */
     @Override
     List<String> bindingProblems(Minecraft mc) throws ReflectiveOperationException {
