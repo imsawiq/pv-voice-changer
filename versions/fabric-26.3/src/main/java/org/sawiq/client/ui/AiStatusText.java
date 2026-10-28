@@ -90,14 +90,19 @@ final class AiStatusText {
             return Component.empty();
         }
 
+        // Before any engine has answered, "auto" points nowhere, and "pick a
+        // way below" would send someone off who already picked the engine.
+        if (ai.installer().progress().state() == EngineInstaller.State.INSTALLING) {
+            return Component.translatable("pvvoicechanger.ai.hint.engine",
+                    Component.translatable(EngineKind.VOICE_ENGINE.translationKey()),
+                    Component.translatable("pvvoicechanger.ai.hint.installing"));
+        }
         EngineKind target = ai.targetEngine();
         if (target == null) {
             return Component.translatable("pvvoicechanger.ai.hint.start");
         }
         if (target == EngineKind.VOICE_ENGINE && !ai.installer().isInstalled()) {
-            return Component.translatable(ai.installer().progress().state() == EngineInstaller.State.INSTALLING
-                    ? "pvvoicechanger.ai.hint.installing"
-                    : "pvvoicechanger.ai.hint.not_installed");
+            return Component.translatable("pvvoicechanger.ai.hint.not_installed");
         }
         EngineStatus status = ai.status(target);
         if (status.availability() == EngineStatus.Availability.STARTING && !status.detail().isBlank()) {

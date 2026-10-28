@@ -33,11 +33,14 @@ Fabric and NeoForge mod for **Plasmo Voice** that adds a full voice changer with
 - **Built-in voice presets** - `Man`, `Woman`, `Kid`, `Titan`, `Demon`, `Batman`, and `Radio`
 - **Real outgoing voice processing** - Changes your microphone before Plasmo Voice encodes and sends it
 - **Independent pitch and formant** - Move the note and the apparent size of the speaker separately, so a raised voice sounds like a different person instead of a chipmunk
-- **Voice Changer Studio** - Opens in a simple mode with one strength control and a microphone meter; an advanced mode exposes every parameter
+- **Voice Changer Studio** - Laid out like Plasmo Voice's own settings: an Effects tab and an AI Voice tab, one row per setting. Opens in a simple mode with one strength control and a microphone meter; the advanced mode shows every parameter
 - **Clean signal path** - Noise gate, de-esser and output limiter, so room noise, sibilance and crackle stay out of the chat
 - **Preset saving** - Save your own custom setups as files and load them later
 - **Preset sharing community** - Join the Discord server to share your presets and download presets from other users
-- **AI voice** - speak with an AI voice instead of the effects: w-okada or the Voice Changer Engine on your own PC, free and live, or ElevenLabs with your own key. The engine is picked automatically. See [docs/AI_VOICE.md](docs/AI_VOICE.md)
+- **AI voice** - speak with an AI voice instead of the effects: the Voice Changer Engine or w-okada on your own PC, free and live, or ElevenLabs with your own key. The engine is picked automatically. See [docs/AI_VOICE.md](docs/AI_VOICE.md)
+- **One-click engine install** - the AI Voice tab downloads the Voice Changer Engine for your graphics card (NVIDIA RTX, older NVIDIA, or AMD and Intel through DirectML), shows the progress, and keeps going while you play. The mod starts and stops the engine by itself
+- **Drop-in voices** - put an RVC voice into the voices folder, a `.pth` with its `.index` or the downloaded `.zip` as it is, and it shows up in the voice gallery and gets picked, no restart
+- **Train your own voice** - drop your recordings into a folder and train a voice without leaving the game; the mod checks the recordings first and says what is missing
 - **API for other mods** - a radio, a mask or a machine can apply a voice while it is in use and hand it back; mods can also add their own voices to the studio. See [docs/API.md](docs/API.md)
 - **Server side** - install it on the server too, to allow or deny the voice changer, mute individual players by command, and hand out your own voices to everyone connected
 - **Works without a server** - everything except the server policy runs on your client alone
@@ -60,7 +63,8 @@ Fabric and NeoForge mod for **Plasmo Voice** that adds a full voice changer with
 1. Install **Plasmo Voice** and this mod on your client. On Fabric you also need **Fabric API**.
 2. Open Plasmo Voice settings, go to the **Activations** tab, and press **Open Voice Changer Studio**.
 3. Pick a voice from the grid and set the strength. **Self Listen** plays your own processed voice back so you can hear what everyone else hears.
-4. **J** switches the effect on and off without opening anything. Rebind it in the same tab.
+4. **J** switches the effect on and off without opening anything. Rebind it in the same tab, where there is also an unbound **Open Studio** key.
+5. For an AI voice, open the **AI Voice** tab and press **Free, on my PC**: the mod installs the engine, 0.25 to 2.7 GB depending on your graphics card. Then add voices through **Voices folder**, or train **Your own voice**.
 
 Nothing here needs a server: on a server without the mod, everything except the server policy still works.
 
@@ -135,11 +139,14 @@ The full reference, including the API for other mods, is in [docs/API.md](docs/A
 - **Готовые голосовые пресеты** - `Man`, `Woman`, `Kid`, `Titan`, `Demon`, `Batman` и `Radio`
 - **Реальная обработка исходящего голоса** - Меняет микрофон ещё до кодирования и отправки через Plasmo Voice
 - **Раздельные высота и форманта** - Ноту и кажущийся размер говорящего можно двигать отдельно, поэтому поднятый голос звучит как другой человек, а не как бурундук
-- **Студия войсченджера** - Открывается в простом режиме с одной ручкой силы и индикатором микрофона; в продвинутом доступны все параметры
+- **Студия войсченджера** - Устроена как настройки самого Plasmo Voice: вкладки «Эффекты» и «ИИ-голос», по строке на настройку. Открывается в простом режиме с одной ручкой силы и индикатором микрофона; в продвинутом видны все параметры
 - **Чистый тракт** - Шумоподавление, де-эссер и лимитер, чтобы шум комнаты, шипение и треск не уходили в чат
 - **Сохранение пресетов** - Можно сохранять свои кастомные настройки в файлы и загружать их
 - **Discord-сервер с пресетами** - Можно делиться своими пресетами и скачивать пресеты других пользователей
-- **ИИ-голос** - говори ИИ-голосом вместо эффектов: w-okada или Voice Changer Engine на своём ПК, бесплатно и вживую, или ElevenLabs по своему ключу. Движок выбирается сам. См. [docs/AI_VOICE.md](docs/AI_VOICE.md)
+- **ИИ-голос** - говори ИИ-голосом вместо эффектов: Voice Changer Engine или w-okada на своём ПК, бесплатно и вживую, или ElevenLabs по своему ключу. Движок выбирается сам. См. [docs/AI_VOICE.md](docs/AI_VOICE.md)
+- **Установка движка в одну кнопку** - вкладка «ИИ-голос» скачивает Voice Changer Engine под твою видеокарту (NVIDIA RTX, NVIDIA постарше или AMD и Intel через DirectML), показывает прогресс и качает дальше, пока ты играешь. Запускает и останавливает движок мод сам
+- **Голоса просто кидаются в папку** - положи RVC-голос в папку голосов, `.pth` вместе с `.index` или скачанный `.zip` как есть, и он появится в галерее голосов и выберется сам, без перезапуска
+- **Свой голос** - кинь свои записи в папку и обучи голос прямо в игре; мод сначала проверит записи и скажет, чего не хватает
 - **API для других модов** - рация, маска или машина могут подменить голос на время и вернуть обратно; моды могут добавлять свои голоса в студию. См. [docs/API.md](docs/API.md)
 - **Серверная часть** - мод ставится и на сервер: разрешить или запретить изменение голоса, замутить игрока командой, раздавать свои голоса всем, кто зашёл
 - **Работает и без сервера** - всё, кроме серверной политики, живёт на клиенте
@@ -162,7 +169,8 @@ The full reference, including the API for other mods, is in [docs/API.md](docs/A
 1. Поставь **Plasmo Voice** и этот мод на клиент. На Fabric нужен ещё **Fabric API**.
 2. Открой настройки Plasmo Voice, вкладку **Активации**, и нажми **Открыть студию войсченджера**.
 3. Выбери голос из сетки и задай силу. **Self Listen** проигрывает тебе твой же обработанный голос — слышно ровно то, что слышат другие.
-4. **J** включает и выключает эффект, ничего не открывая. Переназначить можно там же.
+4. **J** включает и выключает эффект, ничего не открывая. Переназначить можно там же, рядом есть и клавиша **Открыть студию**, по умолчанию не назначенная.
+5. Для ИИ-голоса открой вкладку **ИИ-голос** и нажми **Бесплатно на моём ПК**: мод сам поставит движок, от 0,25 до 2,7 ГБ в зависимости от видеокарты. Потом добавь голоса через **Папку голосов** или обучи **Свой голос**.
 
 Сервер для этого не нужен: на сервере без мода работает всё, кроме серверных правил.
 
