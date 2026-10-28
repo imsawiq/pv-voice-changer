@@ -27,12 +27,28 @@
 - **The engine download fits your graphics card**: about 2.1 GB for NVIDIA RTX,
   2.7 GB for older NVIDIA, 0.25 GB for AMD, Intel or no graphics card. The
   install screen says which before you agree.
+- **Voices you drop in show up by themselves.** While the studio is open the
+  voices folder is watched: a downloaded `.zip` is unpacked, a voice nested one
+  folder too deep is moved up, and a new voice appears in the gallery and is
+  picked. The AI voice tab has a Voices folder button for it.
+- **The install says where it is.** Step of four, a progress bar, minutes so
+  far, and that the screen can be closed meanwhile; the chat says when it is
+  done. An install cut short by quitting the game carries on at the next start
+  without downloading again what it already has.
 
 ### Changed
 - **The studio looks like Plasmo Voice's own settings.** Tabs along the top,
   a label on the left and the control on the right in every row, sections with
   titles. The effects tab, the AI voice tab, voice training and the guides all
   share it. The pitch diagnostics line moved to the advanced view.
+
+### Fixed
+- **Plasmo Voice keys stay bound.** The toggle and studio keys are saved the
+  moment they change. Plasmo Voice writes its config only when its settings
+  close or you leave a world, so a key bound right before quitting the game
+  was lost, and their reset button set them to None instead of the default.
+- An engine that is still loading reads "starting", and a voice still loading
+  is tried again, instead of the tab showing "request timed out".
 
 ## 1.7.5
 
