@@ -207,6 +207,12 @@ def attempt_case(case):
         mods_dir = os.path.join(game_dir, "mods")
         os.makedirs(mods_dir)
         task = ["runClient", f"-Pneoforge={NEOFORGE[mc]}"]
+    # VC_VOICE_MOD_JAR swaps in another build of the voice mod, such as a
+    # beta players run that Modrinth does not hand out as a release.
+    override = os.environ.get("VC_VOICE_MOD_JAR")
+    if override:
+        runtime_mods = [jar for jar in runtime_mods if VOICE_MOD.replace("-", "") not in
+                        os.path.basename(jar).replace("-", "").lower()] + [override]
     for jar in runtime_mods + [case["jar"]]:
         shutil.copy(jar, mods_dir)
 

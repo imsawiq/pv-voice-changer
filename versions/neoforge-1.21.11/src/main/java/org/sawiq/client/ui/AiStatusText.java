@@ -7,6 +7,7 @@ import org.sawiq.client.VoiceChangerAddon;
 import org.sawiq.client.ai.AiVoiceController;
 import org.sawiq.client.ai.engine.EngineKind;
 import org.sawiq.client.ai.engine.EngineStatus;
+import org.sawiq.client.ai.install.EngineInstaller;
 import org.sawiq.client.ai.runtime.AiVoiceRuntime;
 
 /**
@@ -68,6 +69,9 @@ final class AiStatusText {
             return Component.translatable("pvvoicechanger.ai.now.speaking",
                     Component.translatable(running.translationKey()), delayOf(ai, running));
         }
+        if (ai.isLoadingVoice()) {
+            return Component.translatable("pvvoicechanger.ai.now.loading_voice");
+        }
         if (ai.startFailure() != null) {
             return Component.translatable("pvvoicechanger.ai.now.failed", ai.startFailure());
         }
@@ -91,12 +95,20 @@ final class AiStatusText {
             return Component.translatable("pvvoicechanger.ai.hint.start");
         }
         if (target == EngineKind.VOICE_ENGINE && !ai.installer().isInstalled()) {
-            return Component.translatable("pvvoicechanger.ai.hint.not_installed");
+            return Component.translatable(ai.installer().progress().state() == EngineInstaller.State.INSTALLING
+                    ? "pvvoicechanger.ai.hint.installing"
+                    : "pvvoicechanger.ai.hint.not_installed");
+        }
+        EngineStatus status = ai.status(target);
+        if (status.availability() == EngineStatus.Availability.STARTING && !status.detail().isBlank()) {
+            return Component.translatable("pvvoicechanger.ai.hint.engine",
+                    Component.translatable(target.translationKey()),
+                    Component.translatable("pvvoicechanger.ai.hint.starting_stage", status.detail()));
         }
         return Component.translatable("pvvoicechanger.ai.hint.engine",
                 Component.translatable(target.translationKey()),
                 Component.translatable("pvvoicechanger.ai.hint."
-                        + ai.status(target).availability().name().toLowerCase(Locale.ROOT)));
+                        + status.availability().name().toLowerCase(Locale.ROOT)));
     }
 
     static int nowColor(VoiceChangerAddon addon) {

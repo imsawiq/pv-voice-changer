@@ -11,6 +11,7 @@ import org.sawiq.client.ai.AiVoiceController;
 import org.sawiq.client.ai.AiVoiceSettings;
 import org.sawiq.client.ai.AiVoiceSettingsStore;
 import org.sawiq.client.ai.audio.AudioFrames;
+import org.sawiq.client.ai.install.EngineInstaller;
 import org.sawiq.client.ai.runtime.AiVoiceRuntime;
 import org.sawiq.client.ai.runtime.AiVoiceStream;
 import org.sawiq.client.audio.AiCaptureBridge;
@@ -49,6 +50,7 @@ import su.plo.voice.api.client.config.hotkey.Hotkey;
 import su.plo.voice.client.ModVoiceClient;
 import su.plo.voice.client.config.hotkey.ConfigHotkeys;
 import su.plo.voice.client.config.hotkey.HotkeyConfigEntry;
+import su.plo.voice.client.config.hotkey.VoiceHotkey;
 
 /**
  * Client-side state of the voice changer: the current profile, the saved
@@ -209,6 +211,20 @@ public final class VoiceChangerAddon {
         String trained = this.aiVoice.takeFinishedTraining();
         if (trained != null) {
             ClientScreens.sendChatMessage(Component.translatable("pvvoicechanger.ai.train.finished_chat", trained));
+        }
+
+        String addedVoice = this.aiVoice.takeAddedVoice();
+        if (addedVoice != null) {
+            ClientScreens.sendChatMessage(Component.translatable("pvvoicechanger.ai.voices.added_chat", addedVoice));
+        }
+
+        // The install runs in the background, often with the studio closed,
+        // so its end is said where the player is looking.
+        EngineInstaller.Progress installed = this.aiVoice.installer().takeOutcome();
+        if (installed != null) {
+            ClientScreens.sendChatMessage(installed.state() == EngineInstaller.State.INSTALLED
+                    ? Component.translatable("pvvoicechanger.ai.install.done_chat")
+                    : Component.translatable("pvvoicechanger.ai.install.failed_chat", installed.detail()));
         }
 
         AiVoiceStream.Activity activity = this.aiVoice.activity();
@@ -579,21 +595,35 @@ public final class VoiceChangerAddon {
      */
     private void ensureHotkeyRegistered() {
         ConfigHotkeys hotkeys = (ConfigHotkeys) this.voiceClient.getHotkeys();
+        Runnable save = () -> this.voiceClient.getConfig().save(true);
         this.toggleHotkeyEntry = registerHotkey(hotkeys, TOGGLE_HOTKEY_ID,
                 List.of(new Hotkey.Key(Hotkey.Type.KEYSYM, InputConstants.KEY_J)),
-                this::toggleEnabled);
+                this::toggleEnabled, save);
         this.openStudioHotkeyEntry = registerHotkey(hotkeys, OPEN_STUDIO_HOTKEY_ID, List.of(),
-                () -> ClientScreens.open(new VoiceChangerStudioScreen(null, this)));
+                () -> ClientScreens.open(new VoiceChangerStudioScreen(null, this)), save);
     }
 
-    /** Registers the key once, keeping whatever the player rebound it to, and runs the action in game only. */
+    /**
+     * Registers the key once, keeping whatever the player rebound it to, and runs the action in game only.
+     *
+     * <ul>
+     *     <li>A key read back from Plasmo Voice's config is registered there
+     *     with no default keys, so its reset button cleared the key to "None"
+     *     instead of restoring it. The real default is set here.</li>
+     *     <li>Plasmo Voice writes its config only when its settings close or
+     *     the player leaves a world, so a key bound and followed by quitting
+     *     the game was lost. A new key is saved as soon as it is set.</li>
+     * </ul>
+     */
     private static HotkeyConfigEntry registerHotkey(
-            ConfigHotkeys hotkeys, String id, List<Hotkey.Key> defaultKeys, Runnable action) {
+            ConfigHotkeys hotkeys, String id, List<Hotkey.Key> defaultKeys, Runnable action, Runnable save) {
         if (hotkeys.getConfigHotkey(id).isEmpty()) {
             hotkeys.register(id, defaultKeys, HOTKEY_CATEGORY, true);
         }
 
         HotkeyConfigEntry entry = hotkeys.getConfigHotkey(id).orElseThrow();
+        entry.setDefault(new VoiceHotkey(hotkeys, id, defaultKeys, true));
+        entry.addChangeListener(changed -> save.run());
         Hotkey hotkey = entry.value();
         hotkey.clearPressListener();
         hotkey.addPressListener(pressed -> {
